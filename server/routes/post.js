@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const Post = require('../models/Post');
-const { verifyToken, verifyWriter } = require('../middlewares/auth');
+const Post = require('../models/Article');
+const { verifyToken, verifyWriter } = require('../middlewares/authMiddleware');
 
 // Lấy danh sách bài viết với phân trang
 router.get('/', async (req, res) => {

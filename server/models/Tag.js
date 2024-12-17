@@ -1,8 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const tagSchema = new mongoose.Schema({
+const TagSchema = new mongoose.Schema(
+  {
     name: { type: String, required: true, unique: true },
-    slug: { type: String, unique: true }
-});
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Tag', tagSchema);
+module.exports = mongoose.model("Tag", TagSchema);

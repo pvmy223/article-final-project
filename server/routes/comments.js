@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const Post = require('../models/Post');
-const { verifyToken } = require('../middlewares/auth');
+const Post = require('../models/Article');
+const { verifyToken } = require('../middlewares/authMiddleware');
 
 // Đăng bình luận mới
 router.post('/:postId', verifyToken, async (req, res) => {
