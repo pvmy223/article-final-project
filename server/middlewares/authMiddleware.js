@@ -1,6 +1,5 @@
-// middlewares/authMiddleware.js
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const User = require('../models/User');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -15,24 +14,15 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Find user with the token
-    const user = await User.findOne({ 
-      _id: decoded.id,
-      // Optionally, check token validity if implementing token rotation
-    });
-
+    const user = await User.findById(decoded.id);
     if (!user) {
-      throw new Error('User not found');
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
-    // Attach user and token to request object
-    req.token = token;
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ 
-      message: 'Authentication failed',
-      error: error.message 
-    });
+    res.status(401).json({ message: 'Unauthorized', error: error.message });
   }
 };
 

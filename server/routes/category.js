@@ -1,32 +1,16 @@
 const router = require('express').Router();
 const Category = require('../models/Category');
+const categoryController = require('../controllers/categoryController');
 
-// Lấy danh sách tất cả chuyên mục
-router.get('/', async (req, res) => {
-    try {
-        const categories = await Category.find().populate('parentCategory');
-        res.json(categories);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// Create a new category
+router.post('/create', categoryController.createCategory);
 
-// Tạo chuyên mục mới (admin)
-router.post('/', async (req, res) => {
-    try {
-        const { name, parentCategory } = req.body;
+// Get all categories
+router.get('/getcategories', categoryController.listCategories);
 
-        const newCategory = new Category({
-            name,
-            slug: name.toLowerCase().replace(/ /g, '-'),
-            parentCategory
-        });
+// Get articles by category
+router.get('/:id', categoryController.getCategoryArticles);
 
-        await newCategory.save();
-        res.status(201).json(newCategory);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+
 
 module.exports = router;

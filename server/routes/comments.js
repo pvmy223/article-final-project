@@ -1,25 +1,15 @@
-const router = require('express').Router();
-const Post = require('../models/Article');
-const { verifyToken } = require('../middlewares/authMiddleware');
+const express = require('express');
+const router = express.Router();
+const { authenticate } = require('../middlewares/authMiddleware');
+const commentController = require('../controllers/commentController');
 
-// Đăng bình luận mới
-router.post('/:postId', verifyToken, async (req, res) => {
-    try {
-        const { content } = req.body;
+// Create a new comment
+router.post('/create', authenticate, commentController.createComment);
 
-        const post = await Post.findById(req.params.postId);
-        if (!post) return res.status(404).json({ message: 'Post not found' });
+// Get comments by article
+router.get('/:articleId', commentController.getCommentsByArticle);
 
-        const newComment = {
-            user: req.user.id,
-            content
-        };
+// Delete a comment by ID
+router.delete('/:id', authenticate, commentController.deleteComment);
 
-        post.comments.push(newComment);
-        await post.save();
-
-        res.status(201).json({ message: 'Comment added successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+module.exports = router;
