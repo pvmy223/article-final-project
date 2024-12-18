@@ -1,5 +1,5 @@
-const Tag = require('../models/tagModel');
-const Article = require('../models/articleModel');
+const Tag = require('../models/Tag');
+const Article = require('../models/Article');
 
 exports.createTag = async (req, res) => {
   try {

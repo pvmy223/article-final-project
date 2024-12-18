@@ -20,6 +20,7 @@ app.use('/api/article', require('./routes/article'));
 app.use('/api/categories', require('./routes/category'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/tags', require('./routes/tag'));
 
 // Error handling middleware
 app.use(notFoundHandler);

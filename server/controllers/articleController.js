@@ -62,11 +62,7 @@ exports.searchArticles = async (req, res) => {
     // Build search query
     const searchQuery = {
       status: 'published',
-      $or: [
-        { title: { $regex: query, $options: 'i' } },
-        { abstract: { $regex: query, $options: 'i' } },
-        { content: { $regex: query, $options: 'i' } }
-      ]
+      $text: { $search: query }
     };
 
     // Add category filter
@@ -93,12 +89,12 @@ exports.searchArticles = async (req, res) => {
       .limit(Number(limit));
 
     // Count total matching articles
-    const total = await Article.countDocuments(searchQuery);
+    const total = await Article.countDocuments(modifiedQuery);
 
     res.json({
       articles,
       totalPages: Math.ceil(total / limit),
-      currentPage: page
+      currentPage: Number(page)
     });
   } catch (error) {
     res.status(500).json({ 

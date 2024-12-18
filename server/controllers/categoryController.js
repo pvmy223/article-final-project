@@ -72,6 +72,8 @@ exports.getCategoryArticles = async (req, res) => {
 
     const subcategoryIds = subcategories.map(cat => cat._id);
 
+    console.log('Subcategory IDs:', subcategoryIds);
+
     // Find articles in category and subcategories
     const articles = await Article.find({
       category: { $in: subcategoryIds },
@@ -80,6 +82,8 @@ exports.getCategoryArticles = async (req, res) => {
     .populate('category')
     .skip((page - 1) * limit)
     .limit(Number(limit));
+
+    console.log('Found articles:', articles);
 
     // Count total articles
     const total = await Article.countDocuments({
