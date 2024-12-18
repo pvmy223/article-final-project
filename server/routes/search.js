@@ -3,6 +3,6 @@ const router = express.Router();
 const searchController = require('../controllers/articleController');
 
 // Tìm kiếm bài viết
-router.get('/', searchController.searchArticles);
+router.get('/search', searchController.searchArticles);
 
 module.exports = router;
