@@ -58,7 +58,7 @@ exports.login = async (req, res) => {
 
     // Find user by email
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       return res.status(401).json({ 
         message: 'Invalid credentials' 
@@ -67,7 +67,7 @@ exports.login = async (req, res) => {
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
-    
+
     if (!isMatch) {
       return res.status(401).json({ 
         message: 'Invalid credentials' 
@@ -97,6 +97,30 @@ exports.login = async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       message: 'Login failed', 
+      error: error.message 
+    });
+  }
+};
+
+exports.googleCallback = async (req, res) => {
+  try {
+    // User is already authenticated by Passport, so we can access the user object via req.user
+    const user = req.user;
+
+    // Generate a JWT token for the user
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+
+    // Set token as a cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    res.redirect('/'); // Redirect to the home page or any other page
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Google login failed', 
       error: error.message 
     });
   }

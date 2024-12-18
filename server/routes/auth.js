@@ -1,7 +1,5 @@
 const router = require('express').Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const passport = require('passport');
 const authMiddleware = require('../middlewares/authMiddleware');
 const authController = require('../controllers/authController');
 
@@ -10,6 +8,11 @@ router.post('/register', authController.register);
 
 // Login
 router.post('/login', authController.login);
+
+// Google OAuth
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), authController.googleCallback);
 
 // // Get user by token
 // router.get('/user', authMiddleware.authenticate, authController.getUserByToken);
@@ -34,5 +37,7 @@ router.put('/users/:id', authMiddleware.authenticate, authController.updateUserB
 
 // Delete user by ID
 router.delete('/users/:id', authMiddleware.authenticate, authController.deleteUserById);
+
+
 
 module.exports = router;
