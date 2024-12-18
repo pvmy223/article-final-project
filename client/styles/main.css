@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.featured-card {
+  @apply bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl;
+}
+.featured-card img {
+  @apply w-full h-64 object-cover transition-transform duration-300;
+}
+.featured-card:hover img {
+  @apply transform scale-105;
+}
+.featured-content {
+  @apply absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent text-white;
+}
+
+.article-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl;
+}
+.article-card img {
+  @apply w-full h-48 object-cover transition-transform duration-300;
+}
+.article-card:hover img {
+  @apply transform scale-105;
+}
+.article-content {
+  @apply p-4;
+}
+
+.category-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden;
+}
+.category-header {
+  @apply p-4 bg-blue-500 text-white font-bold;
+}
+
+.swiper-pagination-bullet {
+  @apply bg-white opacity-70;
+}
+.swiper-pagination-bullet-active {
+  @apply bg-blue-500 opacity-100;
+}
+.swiper-button-next,
+.swiper-button-prev {
+  @apply text-white;
+}

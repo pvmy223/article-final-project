@@ -5,33 +5,48 @@ const { authenticate } = require('../middlewares/authMiddleware');
 exports.createComment = async (req, res) => {
   try {
     const { articleId, content } = req.body;
+    const user = req.user; // User from auth middleware
 
-    // Find the article
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     const article = await Article.findById(articleId);
     if (!article) {
       return res.status(404).json({ message: 'Article not found' });
     }
 
-    // Create new comment
     const comment = new Comment({
       article: articleId,
-      user: req.user._id,
-      content
+      user: user._id, // Use user._id from auth middleware
+      content,
     });
 
     await comment.save();
+    
+    // Populate user details
+    await comment.populate('user', 'username');
 
-    // Add comment to article
     article.comments.push(comment._id);
     await article.save();
 
     res.status(201).json({
       message: 'Comment added successfully',
-      comment
+      comment: {
+        _id: comment._id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: {
+          _id: user._id,
+          username: user.username
+        }
+      }
     });
+    
   } catch (error) {
+    console.error('Comment creation error:', error);
     res.status(500).json({ 
-      message: 'Comment creation failed', 
+      message: 'Comment creation failed',
       error: error.message 
     });
   }
