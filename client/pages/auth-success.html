@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Success</title>
+</head>
+<body>
+    <script>
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            console.log('Received token:', token);
+            
+            if (token) {
+                try {
+                    localStorage.setItem('token', token);
+                    console.log('Token stored in localStorage');
+                    window.location.href = 'http://127.0.0.1:5500/';
+                } catch (error) {
+                    console.error('Error storing token:', error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

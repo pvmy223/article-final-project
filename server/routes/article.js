@@ -3,19 +3,15 @@ const router = express.Router();
 const { authenticate } = require('../middlewares/authMiddleware');
 const articleController = require('../controllers/articleController');
 
-// Create a new article
-router.post('/create', authenticate, articleController.createArticle);
-
-// Search articles
+// Specific routes first
+router.get('/my-articles', authenticate, articleController.getMyArticles);
 router.get('/search', articleController.searchArticles);
-
-// Get top articles (most viewed, most recent, top by category)
 router.get('/top', articleController.getTopArticles);
 
-// Get an article by ID
+// Generic CRUD routes last
+router.post('/create', authenticate, articleController.createArticle);
 router.get('/:id', articleController.getArticleById);
-
-// Update an article by ID
 router.put('/:id', authenticate, articleController.updateArticle);
+router.delete('/:id', authenticate, articleController.deleteArticle);
 
 module.exports = router;

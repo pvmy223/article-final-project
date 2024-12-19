@@ -9,11 +9,28 @@ router.post('/register', authController.register);
 // Login
 router.post('/login', authController.login);
 
-// Google OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Google OAuth routes
+router.get('/google', 
+    passport.authenticate('google', { 
+        scope: ['profile', 'email'],
+        prompt: 'select_account'  // Force account selection
+    })
+);
 
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), authController.googleCallback);
-
+router.get('/google/callback', 
+    passport.authenticate('google', { 
+        failureRedirect: '/login',
+        failureMessage: true
+    }), 
+    (req, res, next) => {
+        // Handle potential errors before controller
+        if (req.user.error) {
+            return res.redirect('/login?error=' + encodeURIComponent(req.user.error));
+        }
+        next();
+    },
+    authController.googleCallback
+);
 // // Get user by token
 // router.get('/user', authMiddleware.authenticate, authController.getUserByToken);
 

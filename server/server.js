@@ -79,6 +79,8 @@ app.use("/api/article", require("./routes/article"));
 app.use("/api/categories", require("./routes/category"));
 app.use("/api/comments", require("./routes/comments"));
 app.use("/api/tags", require("./routes/tag"));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/upload', require('./routes/upload'));
 
 // Error handling middleware
 app.use(notFoundHandler);
