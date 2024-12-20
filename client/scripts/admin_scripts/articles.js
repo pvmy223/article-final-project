@@ -10,32 +10,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPage = 1;
     let totalPages = 1;
 
-    const loadArticles = async (page = 1, filters = {}) => {
+        const loadArticles = async (page = 1, filters = {}) => {
         try {
             const queryParams = new URLSearchParams({
                 page,
                 ...filters
             });
-
-            const response = await fetch(`http://localhost:5000/api/article/pending?${queryParams}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+    
+            // Fix API endpoint path and authorization header
+            const response = await fetch(`http://localhost:5000/api/article/all?${queryParams}`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
-
-            if (!response.ok) throw new Error('Failed to load articles');
-
+    
+            if (response.status === 403) {
+                console.log('Token:', token); // Debug token
+                const errorData = await response.json();
+                console.log('Error response:', errorData); // Debug error
+                throw new Error(errorData.message || 'Access denied');
+            }
+    
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to load articles');
+            }
+    
             const data = await response.json();
             articles = data.articles;
             currentPage = data.currentPage;
             totalPages = data.totalPages;
-
+    
             renderArticles();
             updatePagination();
         } catch (error) {
             console.error('Error:', error);
-            alert('Không thể tải danh sách bài viết');
+            if (error.message === 'No token provided') {
+                alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                window.location.href = '/pages/login.html';
+            } else {
+                alert('Không thể tải danh sách bài viết: ' + error.message);
+            }
         }
     };
-
+    
     const renderArticles = () => {
         const tbody = document.getElementById('articlesTableBody');
         tbody.innerHTML = articles.map(article => `
@@ -46,9 +66,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${article.title}
                     </a>
                 </td>
-                <td class="px-6 py-4">${article.author.username}</td>
-                <td class="px-6 py-4">${article.category.name}</td>
-                <td class="px-6 py-4">${new Date(article.createdAt).toLocaleDateString('vi-VN')}</td>
+                <td class="px-6 py-4">${article.author?.username || 'N/A'}</td>
+                <td class="px-6 py-4">${article.category?.name || 'N/A'}</td>
+                <td class="px-6 py-4">
+                    ${new Date(article.createdAt).toLocaleDateString('vi-VN')}
+                </td>
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 rounded-full text-xs 
                         ${article.status === 'published' ? 
@@ -58,10 +80,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </span>
                 </td>
                 <td class="px-6 py-4 text-center">
-                    <button onclick="openReviewModal('${article._id}')"
-                            class="text-blue-600 hover:text-blue-900">
-                        Duyệt
-                    </button>
+                    ${article.status === 'draft' ? `
+                        <button onclick="openReviewModal('${article._id}')"
+                                class="text-blue-600 hover:text-blue-900">
+                            Duyệt
+                        </button>
+                    ` : ''}
                 </td>
             </tr>
         `).join('');
@@ -102,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/articles/review/${currentArticleId}`,
+                `http://localhost:5000/api/article/review/${currentArticleId}`,
                 {
                     method: 'PUT',
                     headers: {

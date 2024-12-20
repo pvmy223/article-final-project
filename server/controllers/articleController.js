@@ -350,3 +350,44 @@ exports.getTopArticles = async (req, res) => {
     });
   }
 };
+
+exports.getAllArticles = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Build query based on filters
+        const query = {};
+        if (req.query.status) query.status = req.query.status;
+        if (req.query.category) query.category = req.query.category;
+        if (req.query.search) {
+            query.$or = [
+                { title: { $regex: req.query.search, $options: 'i' } },
+                { content: { $regex: req.query.search, $options: 'i' } }
+            ];
+        }
+
+        const articles = await Article.find(query)
+            .populate('author', 'username')
+            .populate('category', 'name')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const total = await Article.countDocuments(query);
+
+        res.json({
+            articles,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            total
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Failed to retrieve articles',
+            error: error.message
+        });
+    }
+};
