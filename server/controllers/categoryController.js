@@ -57,49 +57,142 @@ exports.listCategories = async (req, res) => {
   }
 };
 
+exports.getAllCategoriesWithSubs = async (req, res) => {
+  try {
+      // Get all categories
+      const categories = await Category.find({}).lean();
+      
+      // Build category map
+      const categoryMap = new Map();
+      categories.forEach(category => {
+          categoryMap.set(category._id.toString(), {
+              ...category,
+              children: []
+          });
+      });
+
+      // Build hierarchy
+      const rootCategories = [];
+      categories.forEach(category => {
+          if (category.parent) {
+              const parentCategory = categoryMap.get(category.parent.toString());
+              if (parentCategory) {
+                  parentCategory.children.push(categoryMap.get(category._id.toString()));
+              }
+          } else {
+              rootCategories.push(categoryMap.get(category._id.toString()));
+          }
+      });
+
+      res.json(rootCategories);
+  } catch (error) {
+      console.error('Category fetch error:', error);
+      res.status(500).json({
+          message: 'Failed to retrieve categories',
+          error: error.message
+      });
+  }
+};
+
 exports.getCategoryArticles = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+      const { id } = req.params;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
 
-    // Find all subcategories
-    const subcategories = await Category.find({ 
-      $or: [
-        { _id: id },
-        { parent: id }
-      ]
-    }).select('_id');
+      const articles = await Article.find({ category: id })
+          .populate('author', 'username email')
+          .populate('category', 'name')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit);
 
-    const subcategoryIds = subcategories.map(cat => cat._id);
+      const totalArticles = await Article.countDocuments({ category: id });
 
-    console.log('Subcategory IDs:', subcategoryIds);
-
-    // Find articles in category and subcategories
-    const articles = await Article.find({
-      category: { $in: subcategoryIds },
-      status: 'published'
-    })
-    .populate('category')
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
-
-    console.log('Found articles:', articles);
-
-    // Count total articles
-    const total = await Article.countDocuments({
-      category: { $in: subcategoryIds },
-      status: 'published'
-    });
-
-    res.json({
-      articles,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page
-    });
+      res.json({
+          articles,
+          currentPage: page,
+          totalPages: Math.ceil(totalArticles / limit),
+          totalArticles
+      });
   } catch (error) {
-    res.status(500).json({ 
-      message: 'Failed to retrieve category articles', 
-      error: error.message 
-    });
+      res.status(500).json({
+          message: 'Failed to fetch category articles',
+          error: error.message
+      });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+      const { id } = req.params;
+
+      // Check for subcategories
+      const hasSubcategories = await Category.exists({ parent: id });
+      if (hasSubcategories) {
+          return res.status(400).json({
+              message: 'Cannot delete category with subcategories'
+          });
+      }
+
+      // Check for articles
+      const hasArticles = await Article.exists({ category: id });
+      if (hasArticles) {
+          return res.status(400).json({
+              message: 'Cannot delete category with articles'
+          });
+      }
+
+      const deletedCategory = await Category.findByIdAndDelete(id);
+      if (!deletedCategory) {
+          return res.status(404).json({
+              message: 'Category not found'
+          });
+      }
+
+      res.json({
+          message: 'Category deleted successfully',
+          category: deletedCategory
+      });
+  } catch (error) {
+      res.status(500).json({
+          message: 'Failed to delete category',
+          error: error.message
+      });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const { name, parent, description } = req.body;
+
+      // Validate parent if provided
+      if (parent) {
+          await Category.findById(parent);
+      }
+
+      const updatedCategory = await Category.findByIdAndUpdate(
+          id,
+          { name, parent, description },
+          { new: true }
+      );
+
+      if (!updatedCategory) {
+          return res.status(404).json({
+              message: 'Category not found'
+          });
+      }
+
+      res.json({
+          message: 'Category updated successfully',
+          category: updatedCategory
+      });
+  } catch (error) {
+      res.status(500).json({
+          message: 'Failed to update category',
+          error: error.message
+      });
   }
 };

@@ -98,7 +98,45 @@ exports.searchArticles = async (req, res) => {
     });
   }
 };
+exports.getPendingArticles = async (req, res) => {
+  try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
 
+      // Build query
+      const query = { status: 'draft' };
+      if (req.query.category) {
+          query.category = req.query.category;
+      }
+
+      // Get articles with pagination
+      const articles = await Article.find(query)
+          .populate('author', 'username')
+          .populate('category', 'name')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean();
+
+      // Get total count
+      const total = await Article.countDocuments(query);
+
+      res.json({
+          articles,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          total
+      });
+
+  } catch (error) {
+      console.error('Error retrieving pending articles:', error);
+      res.status(500).json({ 
+          message: 'Failed to retrieve articles',
+          error: error.message 
+      });
+  }
+};
 exports.getMyArticles = async (req, res) => {
     try {
         const { page = 1, limit = 10, status, search } = req.query;
@@ -162,6 +200,39 @@ exports.getArticleById = async (req, res) => {
       message: "Failed to retrieve article",
       error: error.message,
     });
+  }
+};
+
+exports.reviewArticle = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const { approved, feedback, publishDate, category, tags } = req.body;
+
+      // Find and update article
+      const article = await Article.findById(id);
+      
+      if (!article) {
+          return res.status(404).json({ message: 'Article not found' });
+      }
+
+      // Update article fields
+      article.status = approved ? 'published' : 'draft';
+      article.reviewFeedback = feedback;
+      article.publishDate = publishDate;
+      if (category) article.category = category;
+      if (tags) article.tags = tags;
+
+      await article.save();
+
+      res.json({
+          message: `Article ${approved ? 'approved' : 'rejected'} successfully`,
+          article
+      });
+  } catch (error) {
+      res.status(500).json({
+          message: 'Review failed',
+          error: error.message
+      });
   }
 };
 

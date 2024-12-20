@@ -1,33 +1,39 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const createArticleCard = (article, cardType = 'default') => {
-      const templates = {
-          featured: `
-              <div class="featured-card relative ml-4">
-                  <a href="/pages/article.html?id=${article._id}" class="block">
-                      <img src="${article.featuredImage || '../assets/images/placeholder.jpg'}" 
-                           alt="${article.title}"
-                           style="width: 300px; height: 200px; object-fit: cover;">
-                      <div class="featured-content">
-                          <h3 class="text-xl font-bold mb-2">${article.title}</h3>
-                          <p class="text-sm text-gray-300 mb-2">${article.abstract || ''}</p>
-                          <p class="text-sm">${article.summary || ''}</p>
-                      </div>
-                  </a>
-              </div>`,
-          default: `
-              <div class="article-card">
-                  <a href="/pages/article.html?id=${article._id}" class="block">
-                      <img src="${article.featuredImage || '../assets/images/placeholder.jpg'}" 
-                           alt="${article.title}"
-                           style="width: 300px; height: 200px; object-fit: cover;">
-                      <div class="article-content">
-                          <h3 class="text-lg font-bold mb-2">${article.title}</h3>
-                          <p class="text-sm text-gray-500 mb-2">${article.abstract || ''}</p>
-                          <p class="text-sm text-gray-600">${article.summary || ''}</p>
-                      </div>
-                  </a>
-              </div>`
-      };
+    const formatImageUrl = (imageUrl) => {
+        if (!imageUrl) return 'server/uploads/articles/1734685765080-158529008.jpg';
+        return imageUrl.startsWith('http') ? imageUrl : `http://localhost:5000${imageUrl}`;
+    };
+    const createArticleCard = (article, cardType = 'default') => {
+        const templates = {
+            featured: `
+                <div class="featured-card relative ml-4">
+                    <a href="/pages/article.html?id=${article._id}" class="block">
+                        <img src="${formatImageUrl(article.featuredImage)}" 
+                             alt="${article.title}"
+                             onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';"
+                             style="width: 300px; height: 200px; object-fit: cover;">
+                        <div class="featured-content">
+                            <h3 class="text-xl font-bold mb-2">${article.title}</h3>
+                            <p class="text-sm text-gray-300 mb-2">${article.abstract || ''}</p>
+                            <p class="text-sm">${article.summary || ''}</p>
+                        </div>
+                    </a>
+                </div>`,
+            default: `
+                <div class="article-card">
+                    <a href="/pages/article.html?id=${article._id}" class="block">
+                        <img src="${formatImageUrl(article.featuredImage)}" 
+                             alt="${article.title}"
+                             onerror="this.onerror=null; this.src='../assets/images/placeholder.jpg';"
+                             style="width: 300px; height: 200px; object-fit: cover;">
+                        <div class="article-content">
+                            <h3 class="text-lg font-bold mb-2">${article.title}</h3>
+                            <p class="text-sm text-gray-500 mb-2">${article.abstract || ''}</p>
+                            <p class="text-sm text-gray-600">${article.summary || ''}</p>
+                        </div>
+                    </a>
+                </div>`
+        };
 
       const wrapper = document.createElement('div');
       wrapper.innerHTML = templates[cardType] || templates.default;

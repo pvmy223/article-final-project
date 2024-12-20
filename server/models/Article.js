@@ -41,12 +41,21 @@ const ArticleSchema = new mongoose.Schema({
         default: 0
     },
     featuredImage: {
-        type: String
+        type: String,
+        default: 'https://github.com/pvmy223/article-final-project/blob/c93dbff6b18d78d575c5dbac9aefb80c9d45cc58/server/uploads/articles/1734618406764-520419827.png'
+        
     },
     comments: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Comment'
-    }]
+    }],
+    reviewFeedback: {
+        type: String,
+        default: ''
+    },
+    publishDate: {
+        type: Date
+    }
 }, { timestamps: true });
 
 // Full-text search index

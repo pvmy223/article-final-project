@@ -55,35 +55,117 @@ exports.listTags = async (req, res) => {
 };
 
 exports.getTagArticles = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Find tag first
+        const tag = await Tag.findById(id);
+        if (!tag) {
+            return res.status(404).json({
+                message: 'Tag not found'
+            });
+        }
+
+        // Get total articles count
+        const totalArticles = await Article.countDocuments({ tags: id });
+        const totalPages = Math.ceil(totalArticles / limit);
+
+        // Get articles with pagination
+        const articles = await Article.find({ tags: id })
+            .populate('author', 'username')
+            .populate('category', 'name')
+            .select('title abstract createdAt status viewCount')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            tagName: tag.name,
+            articles,
+            currentPage: page,
+            totalPages,
+            totalArticles
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: 'Failed to retrieve tag articles',
+            error: error.message
+        });
+    }
+};
+
+exports.updateTag = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+      const { id } = req.params;
+      const { name } = req.body;
 
-    // Find articles with this tag
-    const articles = await Article.find({
-      tags: id,
-      status: 'published'
-    })
-    .populate('category')
-    .populate('tags')
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
+      // Check if new name already exists
+      const existingTag = await Tag.findOne({ 
+          name, 
+          _id: { $ne: id } 
+      });
+      
+      if (existingTag) {
+          return res.status(400).json({ 
+              message: 'Tag name already exists' 
+          });
+      }
 
-    // Count total articles
-    const total = await Article.countDocuments({
-      tags: id,
-      status: 'published'
-    });
+      const updatedTag = await Tag.findByIdAndUpdate(
+          id,
+          { name },
+          { new: true }
+      );
 
-    res.json({
-      articles,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page
-    });
+      if (!updatedTag) {
+          return res.status(404).json({ 
+              message: 'Tag not found' 
+          });
+      }
+
+      res.json({
+          message: 'Tag updated successfully',
+          tag: updatedTag
+      });
   } catch (error) {
-    res.status(500).json({ 
-      message: 'Failed to retrieve articles', 
-      error: error.message 
-    });
+      res.status(500).json({ 
+          message: 'Failed to update tag',
+          error: error.message 
+      });
+  }
+};
+
+exports.deleteTag = async (req, res) => {
+  try {
+      const { id } = req.params;
+
+      // Check if tag is used in articles
+      const hasArticles = await Article.exists({ tags: id });
+      if (hasArticles) {
+          return res.status(400).json({
+              message: 'Cannot delete tag that is used in articles'
+          });
+      }
+
+      const deletedTag = await Tag.findByIdAndDelete(id);
+      if (!deletedTag) {
+          return res.status(404).json({
+              message: 'Tag not found'
+          });
+      }
+
+      res.json({
+          message: 'Tag deleted successfully',
+          tag: deletedTag
+      });
+  } catch (error) {
+      res.status(500).json({
+          message: 'Failed to delete tag',
+          error: error.message
+      });
   }
 };

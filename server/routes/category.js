@@ -1,16 +1,16 @@
 const router = require('express').Router();
-const Category = require('../models/Category');
 const categoryController = require('../controllers/categoryController');
+const { authenticate } = require('../middlewares/authMiddleware');
 
-// Create a new category
+// Protected routes
+router.use(authenticate);
+
+// CRUD operations
 router.post('/create', categoryController.createCategory);
-
-// Get all categories
+router.put('/:id', categoryController.updateCategory); // Add update route
 router.get('/getcategories', categoryController.listCategories);
-
-// Get articles by category
-router.get('/:id', categoryController.getCategoryArticles);
-
-
+router.get('/getallwithsubs', categoryController.getAllCategoriesWithSubs);
+router.delete('/delete/:id', categoryController.deleteCategory);
+router.get('/:id/articles', categoryController.getCategoryArticles);
 
 module.exports = router;

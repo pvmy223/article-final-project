@@ -13,18 +13,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code'
     });
 
-    // Load categories and tags
+    let categoryData = [];
+    
     const loadCategories = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/categories/getcategories');
-            const categories = await response.json();
-            const select = document.getElementById('category');
-            categories.forEach(category => {
-                const option = new Option(category.name, category._id);
-                select.add(option);
-            });
+            const response = await fetch('http://localhost:5000/api/categories/getallwithsubs');
+            categoryData = await response.json();
+            
+            const mainSelect = document.getElementById('category');
+            mainSelect.innerHTML = '<option value="">Chọn danh mục</option>';
+            
+            // Add only parent categories to main select
+            categoryData
+                .filter(category => !category.parent)
+                .forEach(category => {
+                    const option = new Option(category.name, category._id);
+                    mainSelect.add(option);
+                });
+
+            // Add change event listener
+            mainSelect.addEventListener('change', handleCategoryChange);
         } catch (error) {
             console.error('Error loading categories:', error);
+        }
+    };
+
+    const handleCategoryChange = (event) => {
+        const selectedId = event.target.value;
+        const categoryContainer = document.getElementById('category').parentElement;
+        
+        // Remove existing subcategory select if exists
+        const existingSubSelect = document.getElementById('subcategory');
+        if (existingSubSelect) {
+            existingSubSelect.parentElement.remove();
+        }
+    
+        if (selectedId) {
+            // Find selected category and its children
+            const selectedCategory = categoryData.find(cat => cat._id === selectedId);
+            
+            if (selectedCategory?.children?.length > 0) {
+                // Create subcategory select
+                const subCategoryDiv = document.createElement('div');
+                subCategoryDiv.className = 'mt-4';
+                
+                const label = document.createElement('label');
+                label.className = 'block text-sm font-medium text-gray-700';
+                label.textContent = 'Danh mục con';
+                
+                const select = document.createElement('select');
+                select.id = 'subcategory';
+                select.className = 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500';
+                
+                select.innerHTML = '<option value="">Chọn danh mục con</option>';
+                selectedCategory.children.forEach(subCat => {
+                    const option = new Option(subCat.name, subCat._id);
+                    select.add(option);
+                });
+    
+                subCategoryDiv.appendChild(label);
+                subCategoryDiv.appendChild(select);
+                categoryContainer.insertAdjacentElement('afterend', subCategoryDiv);
+                
+                // Update form data when subcategory changes
+                select.addEventListener('change', (e) => {
+                    // Keep parent category selected, just store subcategory value
+                    if (e.target.value) {
+                        select.dataset.selectedValue = e.target.value;
+                    } else {
+                        delete select.dataset.selectedValue;
+                    }
+                });
+            }
         }
     };
 
@@ -96,11 +156,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('Uploaded image path:', imagePath);
             }
 
+            const subCategorySelect = document.getElementById('subcategory');
+            const categoryId = subCategorySelect?.dataset.selectedValue || document.getElementById('category').value;
+    
+
             const formData = {
                 title: document.getElementById('title').value,
                 abstract: document.getElementById('abstract').value,
                 content: tinymce.get('content').getContent(),
-                category: document.getElementById('category').value,
+                category: categoryId,
                 tags: Array.from(document.getElementById('tags').selectedOptions).map(option => option.value),
                 isPremium: document.getElementById('isPremium').checked,
                 status: document.getElementById('status').checked ? 'published' : 'draft',

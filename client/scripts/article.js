@@ -1,3 +1,8 @@
+function formatImageUrl(imageUrl) {
+    if (!imageUrl) return '../assets/images/placeholder.jpg';
+    return imageUrl.startsWith('http') ? imageUrl : `http://localhost:5000${imageUrl}`;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     // Constants & Variables
     let allComments = [];
@@ -12,43 +17,75 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Load and display article
-    try {
-        const response = await fetch(`http://localhost:5000/api/article/${articleId}`);
-        if (!response.ok) throw new Error("Article not found");
+    const loadArticle = async () => {
+        try {
+            // Add loading state
+            document.getElementById("article-content").innerHTML = 
+                '<div class="text-center"><span class="text-gray-500">Đang tải...</span></div>';
 
-        const article = await response.json();
-        
-        // Display article
-        document.title = article.title;
-        document.getElementById("article-title").textContent = article.title;
-        document.getElementById("article-date").textContent = new Date(article.createdAt).toLocaleDateString("vi-VN");
-        document.getElementById("article-category").textContent = article.category?.name || "";
+            const response = await fetch(`http://localhost:5000/api/article/${articleId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-        const imageElement = document.getElementById("article-image");
-        imageElement.src = article.featuredImage || "../assets/images/placeholder.jpg";
-        imageElement.alt = article.title;
-        imageElement.className = "max-w-[1200px] max-h-[800px] w-full object-contain rounded-lg";
+            const article = await response.json();
+            console.log("Article data:", article); // Debug log
 
-        document.getElementById("article-content").innerHTML = article.content;
+            // Clear existing content
+            document.getElementById("article-title").textContent = "";
+            document.getElementById("article-content").innerHTML = "";
+            document.getElementById("article-tags").innerHTML = "";
+            
+            // Display article
+            document.title = article.title;
+            document.getElementById("article-title").textContent = article.title;
+            document.getElementById("article-date").textContent = 
+                new Date(article.createdAt).toLocaleDateString("vi-VN");
+            document.getElementById("article-category").textContent = article.category?.name || "";
 
-        // Display tags
-        const tagsContainer = document.getElementById("article-tags");
-        article.tags?.forEach(tag => {
-            const tagElement = document.createElement("span");
-            tagElement.className = "bg-gray-200 px-3 py-1 rounded-full text-sm";
-            tagElement.textContent = tag.name;
-            tagsContainer.appendChild(tagElement);
-        });
+            // Handle featured image
+            const imageElement = document.getElementById("article-image");
+            if (article.featuredImage) {
+                const imageUrl = formatImageUrl(article.featuredImage);
+                imageElement.src = imageUrl;
+                // Show image with fade effect when loaded
+                imageElement.onload = () => {
+                    imageElement.classList.remove('opacity-0');
+                };
+            } else {
+                // Hide image container if no featured image
+                imageElement.parentElement.classList.add('hidden');
+            }
+            // Display content with preserved formatting
+            const contentDiv = document.getElementById("article-content");
+            contentDiv.innerHTML = article.content || '';
 
-        // Load comments
-        await loadAndDisplayComments();
+            // Add TinyMCE styles if not present
+            if (!document.querySelector('link[href*="tinymce"]')) {
+                const styleLink = document.createElement('link');
+                styleLink.rel = 'stylesheet';
+                styleLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/5.10.0/skins/content/default/content.min.css';
+                document.head.appendChild(styleLink);
+            }
 
-    } catch (error) {
-        console.error("Error:", error);
-        document.getElementById("article-content").innerHTML = 
-            '<p class="text-red-500 text-center">Không thể tải bài viết</p>';
-    }
+            // Display tags
+            const tagsContainer = document.getElementById("article-tags");
+            article.tags?.forEach(tag => {
+                const tagElement = document.createElement("span");
+                tagElement.className = "bg-gray-200 px-3 py-1 rounded-full text-sm mr-2";
+                tagElement.textContent = tag.name;
+                tagsContainer.appendChild(tagElement);
+            });
+
+            // Load comments
+            await loadAndDisplayComments();
+
+        } catch (error) {
+            console.error("Error:", error);
+            document.getElementById("article-content").innerHTML = 
+                '<p class="text-red-500 text-center">Không thể tải bài viết</p>';
+        }
+    };
 
     // Load and display comments function
     async function loadAndDisplayComments() {
@@ -218,4 +255,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             }, 2000);
         }
     }
+    await loadArticle();
+
 });

@@ -119,6 +119,7 @@
         </div>
       </nav>
     </header>
+    
     <main class="bg-gray-50">
         <div class="flex min-h-screen">
             <!-- Sidebar -->
@@ -142,6 +143,7 @@
                           </svg>
                           <span>Bài viết của tôi</span>
                       </a>
+
                       <a href="/pages/editor.html" 
                           class="sidebar-link flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,49 +155,110 @@
                   </div>
               </div>
           </div>
+          <div class="flex-1 p-8">
+            <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">Quản lý bài viết chờ duyệt</h1>
+                </div>
 
-            <!-- Main Content -->
-            <div class="flex-1 p-8">
-                <h1 class="text-2xl font-bold mb-8">Thông tin cá nhân</h1>
-                
-                <form id="profileForm" class="max-w-2xl mx-auto bg-white rounded-lg shadow-sm p-8">
-                    <div class="space-y-4">
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Tên người dùng</label>
-                            <input type="text" name="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                <!-- Filters -->
+                <div class="mb-6 flex gap-4">
+                    <select id="categoryFilter" class="border rounded-lg px-3 py-2">
+                        <option value="">Tất cả chuyên mục</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm bài viết..." 
+                           class="border rounded-lg px-3 py-2 flex-1">
+                </div>
+
+                <!-- Articles Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Tiêu đề
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Tác giả
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Chuyên mục
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Ngày gửi
+                                </th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Thao tác
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="articlesTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Articles will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="mt-4">
+                    <!-- Pagination controls will be inserted here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Review Modal -->
+        <div id="reviewModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-2/3 shadow-lg rounded-md bg-white">
+                <div class="flex flex-col space-y-4">
+                    <h2 class="text-xl font-bold">Duyệt bài viết</h2>
+                    
+                    <!-- Article Info -->
+                    <div class="article-info mb-4">
+                        <h3 id="modalTitle" class="text-lg font-semibold"></h3>
+                        <p id="modalAuthor" class="text-gray-600"></p>
+                    </div>
+
+                    <!-- Edit Fields -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Chuyên mục</label>
+                            <select id="modalCategory" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            </select>
                         </div>
-
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Mật khẩu mới</label>
-                            <input type="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                            <p class="text-sm text-gray-500">Để trống nếu không muốn thay đổi mật khẩu</p>
-                        </div>
-
-                        <div class="flex flex-col space-y-3 pt-4">
-                            <button type="submit" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                Cập nhật thông tin
-                            </button>
-                        </div>
-
-                        <div class="flex justify-end pt-4 border-t">
-                            <button type="button" id="deleteAccount" class="text-red-600 hover:text-red-700">
-                                Xóa tài khoản
-                            </button>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tags</label>
+                            <select id="modalTags" multiple class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            </select>
                         </div>
                     </div>
-                </form>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Thời gian xuất bản</label>
+                        <input type="datetime-local" id="publishDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Ghi chú phản hồi</label>
+                        <textarea id="feedback" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-3">
+                        <button id="closeModal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">
+                            Đóng
+                        </button>
+                        <button id="rejectArticle" class="px-4 py-2 bg-red-600 text-white rounded-md">
+                            Từ chối
+                        </button>
+                        <button id="approveArticle" class="px-4 py-2 bg-green-600 text-white rounded-md">
+                            Duyệt
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </main>
-    <footer></footer>
-    <script src="../scripts/main.js"></script>
-    <script src="../scripts/profile.js"></script>
-    <script src="../scripts/sidebar.js"></script>
+    </div>
 
-  </body>
+    <script src="../scripts/editor.js"></script>
+    <script src="../scripts/main.js"></script>
+    <script src="../scripts/sidebar.js"></script>
+</body>
 </html>
