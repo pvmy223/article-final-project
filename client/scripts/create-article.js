@@ -17,24 +17,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const loadCategories = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/categories/getallwithsubs');
-            categoryData = await response.json();
+            const response = await fetch('http://localhost:5000/api/categories/getallwithsubs', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+    
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.");
+                    window.location.href = "/pages/login.html";
+                    return;
+                }
+                throw new Error('Failed to load categories');
+            }
+    
+            const data = await response.json();
+            if (!Array.isArray(data)) {
+                console.error('Invalid category data:', data);
+                throw new Error('Invalid category data format');
+            }
             
+            categoryData = data;
             const mainSelect = document.getElementById('category');
             mainSelect.innerHTML = '<option value="">Chọn danh mục</option>';
             
-            // Add only parent categories to main select
             categoryData
                 .filter(category => !category.parent)
                 .forEach(category => {
                     const option = new Option(category.name, category._id);
                     mainSelect.add(option);
                 });
-
-            // Add change event listener
+    
             mainSelect.addEventListener('change', handleCategoryChange);
         } catch (error) {
             console.error('Error loading categories:', error);
+            alert('Không thể tải danh sách chuyên mục');
         }
     };
 
@@ -90,15 +109,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadTags = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/tags/gettags');
-            const tags = await response.json();
-            const select = document.getElementById('tags');
-            tags.forEach(tag => {
-                const option = new Option(tag.name, tag._id);
-                select.add(option);
+            const response = await fetch('http://localhost:5000/api/tags/gettags', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
+    
+            if (!response.ok) {
+                throw new Error('Failed to load tags');
+            }
+    
+            const tags = await response.json();
+            
+            if (!Array.isArray(tags)) {
+                console.error('Tags data is not an array:', tags);
+                return;
+            }
+    
+            // Transform tags data for Select2
+            const tagData = tags.map(tag => ({
+                id: tag._id,
+                text: tag.name
+            }));
+    
+            // Initialize Select2
+            jQuery('#tags').select2({
+                placeholder: 'Chọn tags',
+                allowClear: true,
+                multiple: true,
+                width: '100%',
+                data: tagData
+            });
+    
         } catch (error) {
             console.error('Error loading tags:', error);
+            alert('Không thể tải danh sách tags');
         }
     };
 
@@ -165,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 abstract: document.getElementById('abstract').value,
                 content: tinymce.get('content').getContent(),
                 category: categoryId,
-                tags: Array.from(document.getElementById('tags').selectedOptions).map(option => option.value),
+                tags: jQuery('#tags').val(),
                 isPremium: document.getElementById('isPremium').checked,
                 status: document.getElementById('status').checked ? 'published' : 'draft',
                 featuredImage: imagePath
