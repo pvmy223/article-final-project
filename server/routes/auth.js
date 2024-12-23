@@ -55,6 +55,8 @@ router.put('/users/:id', authMiddleware.authenticate, authController.updateUserB
 // Delete user by ID
 router.delete('/users/:id', authMiddleware.authenticate, authController.deleteUserById);
 
+router.put('/users/:id/assign-categories', authMiddleware.authenticate, authController.assignCategories);
+
 
 
 module.exports = router;

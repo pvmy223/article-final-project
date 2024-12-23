@@ -385,3 +385,26 @@ exports.deleteUserById = async (req, res) => {
     });
   }
 };
+
+exports.assignCategories = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const { categories } = req.body;
+
+      const user = await User.findById(id);
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (user.role !== 'editor') {
+          return res.status(400).json({ message: 'User is not an editor' });
+      }
+
+      user.managedCategories = categories;
+      await user.save();
+
+      res.json({ message: 'Categories assigned successfully' });
+  } catch (error) {
+      res.status(500).json({ message: error.message });
+  }
+};

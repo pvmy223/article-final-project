@@ -159,12 +159,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    const loadCategories = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/categories/getallwithsubs', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load categories');
+            
+            const categories = await response.json();
+            const select = document.getElementById('categoryFilter');
+            
+            // Recursive function to add options with proper indentation
+            const addOption = (category, level = 0) => {
+                const indent = '- '.repeat(level);
+                const option = new Option(`${indent}${category.name}`, category._id);
+                select.add(option);
+                
+                if (category.children && category.children.length > 0) {
+                    category.children.forEach(child => addOption(child, level + 1));
+                }
+            };
+            
+            categories
+                .filter(category => !category.parent)
+                .forEach(category => addOption(category));
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Không thể tải danh sách chuyên mục');
+        }
+    };
+
     // Initialize
+    await loadCategories();
     await loadArticles();
 
     // Add filter event listeners
+    // Update filter event listeners
     ['statusFilter', 'categoryFilter'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => changePage(1));
+        document.getElementById(id).addEventListener('change', () => {
+            currentPage = 1; // Reset to first page when filter changes
+            loadArticles(1, {
+                status: document.getElementById('statusFilter').value,
+                category: document.getElementById('categoryFilter').value,
+                search: document.getElementById('searchInput').value
+            });
+        });
     });
 
     document.getElementById('searchInput').addEventListener('input', 

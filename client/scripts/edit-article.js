@@ -21,19 +21,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   const loadCategories = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/categories/getallwithsubs"
+        "http://localhost:5000/api/categories/getallwithsubs",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
-      categoryData = await response.json();
 
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.");
+          window.location.href = "/pages/login.html";
+          return;
+        }
+        throw new Error("Failed to load categories");
+      }
+
+      categoryData = await response.json();
       const mainSelect = document.getElementById("category");
       mainSelect.innerHTML = '<option value="">Chọn danh mục</option>';
 
-      categoryData
-        .filter((category) => !category.parent)
-        .forEach((category) => {
-          const option = new Option(category.name, category._id);
-          mainSelect.add(option);
-        });
+      if (Array.isArray(categoryData)) {
+        categoryData
+          .filter((category) => !category.parent)
+          .forEach((category) => {
+            const option = new Option(category.name, category._id);
+            mainSelect.add(option);
+          });
+      } else {
+        console.error("Category data is not an array:", categoryData);
+      }
 
       mainSelect.addEventListener("change", handleCategoryChange);
 
@@ -93,38 +112,65 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   };
-  const loadTags = async () => {
-    try {
-        const response = await fetch('http://localhost:5000/api/tags/gettags');
-        const tags = await response.json();
-        const select = document.getElementById('tags');
-        
-        tags.forEach(tag => {
-            const option = new Option(tag.name, tag._id);
-            select.add(option);
-        });
-
-        // If editing article, select its tags
-        if (articleId) {
-            const articleResponse = await fetch(`http://localhost:5000/api/article/${articleId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const article = await articleResponse.json();
-            
-            // Set selected tags
-            const tagSelect = document.getElementById('tags');
-            article.tags.forEach(tag => {
-                Array.from(tagSelect.options).forEach(option => {
-                    if (option.value === tag._id) {
-                        option.selected = true;
-                    }
-                });
-            });
-        }
+    const loadTags = async () => {
+      try {
+          const response = await fetch("http://localhost:5000/api/tags/gettags", {
+              headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+              },
+          });
+  
+          if (!response.ok) {
+              throw new Error("Failed to load tags");
+          }
+  
+          const tags = await response.json();
+          
+          if (!Array.isArray(tags)) {
+              console.error("Tags data is not an array:", tags);
+              return;
+          }
+  
+          // Transform tags data for Select2
+          const tagData = tags.map(tag => ({
+              id: tag._id,
+              text: tag.name,
+              selected: false
+          }));
+  
+          // Initialize Select2 with transformed data
+          jQuery('#tags').select2({
+              placeholder: 'Chọn tags',
+              allowClear: true,
+              multiple: true,
+              width: '100%',
+              data: tagData
+          });
+  
+          // If editing article, set selected tags
+          if (articleId) {
+              const articleResponse = await fetch(
+                  `http://localhost:5000/api/article/${articleId}`,
+                  {
+                      headers: { Authorization: `Bearer ${token}` }
+                  }
+              );
+  
+              if (articleResponse.ok) {
+                  const article = await articleResponse.json();
+                  if (article.tags && Array.isArray(article.tags)) {
+                      const selectedTagIds = article.tags.map(tag => tag._id);
+                      jQuery('#tags').val(selectedTagIds).trigger('change');
+                  }
+              }
+          }
       } catch (error) {
-          console.error('Error loading tags:', error);
+          console.error("Error loading tags:", error);
+          alert("Không thể tải danh sách tags");
       }
   };
+
   const loadArticle = async () => {
     try {
       const response = await fetch(
@@ -135,42 +181,40 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       const article = await response.json();
 
-      console.log("Article:", article);
-
       document.getElementById("title").value = article.title;
       document.getElementById("abstract").value = article.abstract;
       tinymce.get("content").setContent(article.content);
 
       const imagePreview = document.getElementById("imagePreview");
-        if (article.featuredImage) {
-            // Handle external URLs and local paths differently
-            let imageUrl = article.featuredImage;
-            if (!imageUrl.startsWith('http')) {
-                // Local image path
-                imageUrl = `http://localhost:5000${imageUrl}`;
-            }
-
-            // Set image attributes
-            imagePreview.alt = `Featured image for article: ${article.title}`;
-            imagePreview.classList.remove("hidden");
-            imagePreview.dataset.existingImage = article.featuredImage;
-
-            // Create new Image object to test loading
-            const img = new Image();
-            img.onload = () => {
-                imagePreview.src = imageUrl;
-            };
-            img.onerror = () => {
-                console.error('Failed to load image:', imageUrl);
-                imagePreview.alt = "Failed to load image";
-                imagePreview.src = "";
-            };
-            img.src = imageUrl;
-        } else {
-            imagePreview.alt = "No featured image available";
-            imagePreview.src = "";
-            imagePreview.classList.add("hidden");
+      if (article.featuredImage) {
+        // Handle external URLs and local paths differently
+        let imageUrl = article.featuredImage;
+        if (!imageUrl.startsWith("http")) {
+          // Local image path
+          imageUrl = `http://localhost:5000${imageUrl}`;
         }
+
+        // Set image attributes
+        imagePreview.alt = `Featured image for article: ${article.title}`;
+        imagePreview.classList.remove("hidden");
+        imagePreview.dataset.existingImage = article.featuredImage;
+
+        // Create new Image object to test loading
+        const img = new Image();
+        img.onload = () => {
+          imagePreview.src = imageUrl;
+        };
+        img.onerror = () => {
+          console.error("Failed to load image:", imageUrl);
+          imagePreview.alt = "Failed to load image";
+          imagePreview.src = "";
+        };
+        img.src = imageUrl;
+      } else {
+        imagePreview.alt = "No featured image available";
+        imagePreview.src = "";
+        imagePreview.classList.add("hidden");
+      }
       // Find parent category if exists
       const parentCategory = categoryData.find((cat) =>
         cat.children.some((child) => child._id === article.category._id)
@@ -190,6 +234,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         document.getElementById("category").value = article.category._id;
       }
+
+      if (article.tags && Array.isArray(article.tags)) {
+        jQuery('#tags').val(article.tags).trigger('change');
+        console.log("Selected tags:", article.tags);
+    }
 
       document.getElementById("isPremium").checked = article.isPremium;
       document.getElementById("status").checked =
@@ -257,9 +306,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           abstract: document.getElementById("abstract").value,
           content: tinymce.get("content").getContent(),
           category: categoryId,
-          tags: Array.from(document.getElementById("tags").selectedOptions).map(
-            (option) => option.value
-          ),
+          tags: jQuery('#tags').val(),
           isPremium: document.getElementById("isPremium").checked,
           status: document.getElementById("status").checked
             ? "published"
