@@ -8,23 +8,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     let users = [];
     let categories = [];
     let editingId = null;
+    let filteredUsers = [];
 
+    // Function declarations first
     const loadUsers = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/auth/users', {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetch('http://localhost:5000/api/users', {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
             });
             
-            if (!response.ok) throw new Error('Failed to load users');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to load users');
+            }
             
-            users = await response.json();
-            renderUsers(users);
+            const data = await response.json();
+            users = data;
+            filteredUsers = data;
+            renderUsers(filteredUsers);
         } catch (error) {
-            console.error('Error:', error);
-            alert('Không thể tải danh sách người dùng');
+            console.error('Error loading users:', error);
+            throw error;
         }
     };
 
+    const filterUsers = (roleFilter = '') => {
+        if (!roleFilter) {
+            filteredUsers = users;
+        } else {
+            filteredUsers = users.filter(user => user.role === roleFilter);
+        }
+        renderUsers(filteredUsers);
+    };
+    
     const loadCategories = async () => {
         try {
             const response = await fetch('http://localhost:5000/api/categories/getallwithsubs', {
@@ -53,58 +73,104 @@ document.addEventListener('DOMContentLoaded', async () => {
                         new Date(user.subscriberExpiryDate).toLocaleDateString('vi-VN') : 
                         'N/A'}
                 </td>
-                <td class="px-6 py-4 space-x-2">
+                <td class="px-6 py-4 text-center">
                     <button onclick="editUser('${user._id}')"
                             class="text-blue-600 hover:text-blue-900">
-                        Sửa
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
                     </button>
+                </td>
+                <td class="px-6 py-4 text-center">
                     ${user.role === 'editor' ? `
                         <button onclick="assignCategories('${user._id}')"
                                 class="text-green-600 hover:text-green-900">
-                            Phân công
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
                         </button>
                     ` : ''}
-                    ${user.role === 'subscriber' ? `
-                        <button onclick="extendSubscription('${user._id}')"
-                                class="text-purple-600 hover:text-purple-900">
-                            Gia hạn
-                        </button>
-                    ` : ''}
+                </td>
+                <td class="px-6 py-4 text-center">
                     <button onclick="deleteUser('${user._id}')"
                             class="text-red-600 hover:text-red-900">
-                        Xóa
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
                     </button>
                 </td>
             </tr>
         `).join('');
     };
-    const updateCategorySelect = () => {
+    const updateCategorySelect = (currentUser = null) => {
         const select = document.getElementById('managedCategories');
         select.innerHTML = '';
         
         const addOption = (category, level = 0) => {
             const indent = '- '.repeat(level);
             const option = new Option(`${indent}${category.name}`, category._id);
+            
+            // Check if category is managed by current user
+            if (currentUser && currentUser.managedCategories) {
+                option.selected = currentUser.managedCategories.some(
+                    managedCat => managedCat._id === category._id
+                );
+                if (option.selected) {
+                    option.style.backgroundColor = '#e5e7eb';
+                    option.style.fontWeight = 'bold';
+                }
+            }
+            
             select.add(option);
             
             if (category.children && category.children.length > 0) {
                 category.children.forEach(child => addOption(child, level + 1));
             }
         };
-
+    
         categories
             .filter(category => !category.parent)
             .forEach(category => addOption(category));
+    
     };
-
-    // Add role change handler to show/hide category section
-    document.getElementById('role').addEventListener('change', (e) => {
-        const categorySection = document.getElementById('categorySection');
-        const subscriptionSection = document.getElementById('subscriptionSection');
-        
-        categorySection.classList.toggle('hidden', e.target.value !== 'editor');
-        subscriptionSection.classList.toggle('hidden', e.target.value !== 'subscriber');
+    // Add role filter event listener
+    document.getElementById('roleFilter').addEventListener('change', (e) => {
+        const roleFilter = e.target.value;
+        filterUsers(roleFilter);
     });
+
+    try {
+        const roleFilterElement = document.getElementById('roleFilter');
+        if (roleFilterElement) {
+            roleFilterElement.addEventListener('change', (e) => {
+                const roleFilter = e.target.value;
+                filterUsers(roleFilter);
+            });
+        }
+
+        const roleElement = document.getElementById('role');
+        if (roleElement) {
+            roleElement.addEventListener('change', (e) => {
+                const categorySection = document.getElementById('categorySection');
+                const subscriptionSection = document.getElementById('subscriptionSection');
+                
+                if (categorySection && subscriptionSection) {
+                    categorySection.classList.toggle('hidden', e.target.value !== 'editor');
+                    subscriptionSection.classList.toggle('hidden', e.target.value !== 'subscriber');
+                }
+            });
+        }
+
+        // Load initial data
+        await Promise.all([loadUsers(), loadCategories()]);
+        
+    } catch (error) {
+        console.error('Error initializing page:', error);
+        alert('Không thể khởi tạo trang: ' + error.message);
+    }
 
     window.closeModal = () => {
         const modal = document.getElementById('userModal');
@@ -122,29 +188,118 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reset editing state
         editingId = null;
     };
+
+        window.editUser = async (userId) => {
+        const user = users.find(u => u._id === userId);
+        if (!user) return;
+    
+        editingId = userId;
+    
+        // Show modal and init
+        document.getElementById('userModal').classList.remove('hidden');
+        document.getElementById('modalTitle').textContent = 'Sửa thông tin người dùng';
+    
+        // Fill form data
+        document.getElementById('username').value = user.username;
+        document.getElementById('email').value = user.email;
+        document.getElementById('role').value = user.role;
+    
+        const categorySection = document.getElementById('categorySection');
+        const subscriptionSection = document.getElementById('subscriptionSection');
+        const roleSelect = document.getElementById('role');
+        
+        function roleChangeHandler(e) {
+            const newRole = e.target.value;
+            const oldRole = user.role;
+        
+            // Only update UI, don't save to server
+            if (newRole === 'subscriber') {
+                const now = new Date();
+                const minutesInWeek = 7 * 24 * 60;
+                const millisecondsToAdd = minutesInWeek * 60 * 1000;
+                const defaultExpiry = new Date(now.getTime() + millisecondsToAdd);
+                
+                document.getElementById('expiryDate').value = defaultExpiry.toISOString().split('T')[0];
+            }
+        
+            // Toggle sections visibility
+            categorySection.classList.toggle('hidden', newRole !== 'editor');
+            subscriptionSection.classList.toggle('hidden', newRole !== 'subscriber');
+        }
+    
+        // Remove old handler if exists
+        if (roleSelect.dataset.currentHandler) {
+            roleSelect.removeEventListener('change', window[roleSelect.dataset.currentHandler]);
+            delete window[roleSelect.dataset.currentHandler];
+        }
+    
+        // Store handler with unique name
+        const handlerName = `roleChangeHandler_${userId}`;
+        window[handlerName] = roleChangeHandler;
+        roleSelect.dataset.currentHandler = handlerName;
+    
+        // Add new handler
+        roleSelect.addEventListener('change', roleChangeHandler);
+    
+        // Update close modal
+        window.closeModal = () => {
+            if (roleSelect.dataset.currentHandler) {
+                const handlerName = roleSelect.dataset.currentHandler;
+                roleSelect.removeEventListener('change', window[handlerName]);
+                delete window[handlerName];
+                delete roleSelect.dataset.currentHandler;
+            }
+    
+            const modal = document.getElementById('userModal');
+            const form = document.getElementById('userForm');
+            
+            form.reset();
+            modal.classList.add('hidden');
+            
+            document.getElementById('username').parentElement.classList.remove('hidden');
+            document.getElementById('email').parentElement.classList.remove('hidden');
+            document.getElementById('role').parentElement.classList.remove('hidden');
+            
+            editingId = null;
+        };
+    
+        // Show/hide sections based on current role
+        categorySection.classList.toggle('hidden', user.role !== 'editor');
+        subscriptionSection.classList.toggle('hidden', user.role !== 'subscriber');
+    };
+    
+
+    // Update form submit handler
+        // Update main form submit handler
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const formData = {
-            username: document.getElementById('username').value,
-            email: document.getElementById('email').value,
-            role: document.getElementById('role').value,
-        };
-    
-        if (formData.role === 'editor') {
-            formData.managedCategories = Array.from(
-                document.getElementById('managedCategories').selectedOptions
-            ).map(option => option.value);
+        // Skip if this is a category assignment form
+        if (document.getElementById('categorySection').classList.contains('hidden') === false &&
+            document.getElementById('username').parentElement.classList.contains('hidden')) {
+            return; // Let the category-specific handler handle this
         }
-    
-        if (formData.role === 'subscriber') {
-            formData.expiryDate = document.getElementById('expiryDate').value;
-        }
-    
+        
         try {
             const url = editingId 
-                ? `http://localhost:5000/api/auth/users/update/${editingId}`
-                : 'http://localhost:5000/api/auth/register';
+                ? `http://localhost:5000/api/users/${editingId}/role`
+                : 'http://localhost:5000/api/users';
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value
+            };
+    
+            if (formData.role === 'editor') {
+                formData.managedCategories = Array.from(
+                    document.getElementById('managedCategories').selectedOptions
+                ).map(option => option.value);
+            }
+    
+            if (formData.role === 'subscriber') {
+                formData.subscriberExpiryDate = document.getElementById('expiryDate').value;
+            }
     
             const response = await fetch(url, {
                 method: editingId ? 'PUT' : 'POST',
@@ -155,17 +310,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify(formData)
             });
     
+            const data = await response.json();
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to save user');
+                throw new Error(data.message || 'Operation failed');
             }
     
             window.closeModal();
             await loadUsers();
-            alert('Lưu thông tin người dùng thành công');
+            alert('Cập nhật thành công');
         } catch (error) {
             console.error('Error:', error);
-            alert('Không thể lưu thông tin người dùng: ' + error.message);
+            alert('Không thể cập nhật: ' + error.message);
         }
     });
 
@@ -173,7 +328,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const user = users.find(u => u._id === userId);
         if (!user) return;
     
-        // Show category modal
+        editingId = userId;
+    
+        // Show modal and set title
         document.getElementById('userModal').classList.remove('hidden');
         document.getElementById('modalTitle').textContent = `Phân công chuyên mục cho ${user.username}`;
         
@@ -184,20 +341,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('role').parentElement.classList.add('hidden');
         document.getElementById('subscriptionSection').classList.add('hidden');
     
-        // Pre-select managed categories
-        const select = document.getElementById('managedCategories');
-        Array.from(select.options).forEach(option => {
-            option.selected = user.managedCategories?.includes(option.value);
+        // Pre-select managed categories and update select
+        updateCategorySelect(user);
+    
+        // Handle form submission
+        const form = document.getElementById('userForm');
+        
+        // Remove existing handlers
+        form.onsubmit = null;
+        const oldHandlers = form.getAttribute('data-handlers') || '';
+        oldHandlers.split(',').forEach(handler => {
+            if (handler) form.removeEventListener('submit', window[handler]);
         });
     
-        // Update form submit handler for category assignment
-        const form = document.getElementById('userForm');
-        const originalSubmit = form.onsubmit;
-        
-        form.onsubmit = async (e) => {
+        // Create new handler
+        async function submitHandler(e) {
             e.preventDefault();
+            
             try {
-                const response = await fetch(`http://localhost:5000/api/auth/users/${userId}/assign-categories`, {
+                const select = document.getElementById('managedCategories');
+                const response = await fetch(`http://localhost:5000/api/users/${editingId}/assign-categories`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -208,19 +371,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     })
                 });
     
-                if (!response.ok) throw new Error('Failed to assign categories');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
     
-                closeModal();
                 await loadUsers();
+                window.closeModal();
                 alert('Phân công chuyên mục thành công');
+    
+                // Cleanup
+                form.removeEventListener('submit', submitHandler);
+                form.setAttribute('data-handlers', '');
+    
             } catch (error) {
                 console.error('Error:', error);
-                alert('Không thể phân công chuyên mục');
+                alert('Không thể phân công chuyên mục: ' + error.message);
             }
-            
-            form.onsubmit = originalSubmit;
-        };
+        }
+    
+        // Add new handler
+        form.addEventListener('submit', submitHandler);
+        form.setAttribute('data-handlers', submitHandler.name);
     };
     // Initialize page
     await Promise.all([loadUsers(), loadCategories()]);
+    document.getElementById('roleFilter').value = ''; // Reset filter on load
 });

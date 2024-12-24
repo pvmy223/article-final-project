@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Verify admin role
-        const response = await fetch(`http://localhost:5000/api/auth/users/${tokenPayload.id}`, {
+        const response = await fetch(`http://localhost:5000/api/users/${tokenPayload.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

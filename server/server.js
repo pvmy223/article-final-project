@@ -75,6 +75,7 @@ passport.deserializeUser(async (id, done) => {
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
+app.use('/api/users', require('./routes/user'));
 app.use("/api/article", require("./routes/article"));
 app.use("/api/categories", require("./routes/category"));
 app.use("/api/comments", require("./routes/comments"));

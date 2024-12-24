@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Debug - User ID:', userId);
 
         // Fix API endpoint path
-        const response = await fetch(`http://localhost:5000/api/auth/users/${userId}`, {
+        const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                const updateResponse = await fetch(`http://localhost:5000/api/auth/users/${userId}`, {
+                const updateResponse = await fetch(`http://localhost:5000/api/users/${userId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!confirm('Bạn có chắc muốn xóa tài khoản?')) return;
 
             try {
-                const deleteResponse = await fetch(`http://localhost:5000/api/auth/users/${userId}`, {
+                const deleteResponse = await fetch(`http://localhost:5000/api/users/${userId}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`
