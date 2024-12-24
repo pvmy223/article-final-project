@@ -204,36 +204,42 @@ exports.getArticleById = async (req, res) => {
 };
 
 exports.reviewArticle = async (req, res) => {
-  try {
-      const { id } = req.params;
-      const { approved, feedback, publishDate, category, tags } = req.body;
+    try {
+        const { id } = req.params;
+        const { approved, feedback } = req.body;
 
-      // Find and update article
-      const article = await Article.findById(id);
-      
-      if (!article) {
-          return res.status(404).json({ message: 'Article not found' });
-      }
+        const article = await Article.findById(id);
+        if (!article) {
+            return res.status(404).json({ message: 'Article not found' });
+        }
 
-      // Update article fields
-      article.status = approved ? 'published' : 'draft';
-      article.reviewFeedback = feedback;
-      article.publishDate = publishDate;
-      if (category) article.category = category;
-      if (tags) article.tags = tags;
+        if (approved) {
+            article.status = 'published';
+            article.publishDate = new Date();
+            article.rejectReason = null;
+        } else {
+            if (!feedback) {
+                return res.status(400).json({ message: 'Reject reason is required' });
+            }
+            article.status = 'rejected';
+            article.rejectReason = feedback;
+            article.publishDate = null;
+        }
 
-      await article.save();
+        const updatedArticle = await article.save();
 
-      res.json({
-          message: `Article ${approved ? 'approved' : 'rejected'} successfully`,
-          article
-      });
-  } catch (error) {
-      res.status(500).json({
-          message: 'Review failed',
-          error: error.message
-      });
-  }
+        res.json({
+            message: approved ? 'Article published' : 'Article rejected',
+            article: updatedArticle
+        });
+
+    } catch (error) {
+        console.error('Review article error:', error);
+        res.status(500).json({
+            message: 'Failed to review article',
+            error: error.message
+        });
+    }
 };
 
 exports.updateArticle = async (req, res) => {

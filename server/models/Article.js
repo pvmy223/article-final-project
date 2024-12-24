@@ -29,8 +29,11 @@ const ArticleSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'published'],
+        enum: ['draft', 'published', 'rejected'],
         default: 'draft'
+    },
+    rejectReason: {
+        type: String
     },
     isPremium: {
         type: Boolean,

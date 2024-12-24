@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('Vui lòng đăng nhập để tiếp tục');
             setTimeout(() => {
                 window.location.href = '/pages/login.html';
-            }, 10000); // 10 second delay
+            }, 2000); // 10 second delay
             return;
         }
 
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('Phiên làm việc không hợp lệ, vui lòng đăng nhập lại');
             setTimeout(() => {
                 window.location.href = '/pages/login.html';
-            }, 10000);
+            }, 2000);
             return;
         }
 
@@ -41,10 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('User data:', userData);
 
         if (userData.role !== 'administrator') {
-            alert('Bạn không có quyền truy cập trang này. Sẽ chuyển về trang chủ sau 10 giây');
+            alert('Bạn không có quyền truy cập trang này.');
             setTimeout(() => {
                 window.location.href = '/';
-            }, 10000);
+            }, 2000);
             return;
         }
 
