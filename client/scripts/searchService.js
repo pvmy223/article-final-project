@@ -3,26 +3,23 @@ class SearchService {
 
     static async searchArticles(query, page = 1, category = '', tags = []) {
         try {
-            // Fix: Update endpoint from /api/article/search to /api/articles/search
             const url = new URL(`${this.API_BASE_URL}/api/article/search`);
             url.searchParams.append('query', query || '');
             url.searchParams.append('page', page);
-            url.searchParams.append('category', category || '');
-            url.searchParams.append('tags', tags.join(','));
-            url.searchParams.append('limit', '10'); // Add limit parameter
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(response.status === 404 ? 'Search endpoint not found' : 'Search request failed');
+            
+            if (category) {
+                url.searchParams.append('category', category);
             }
-
+            
+            if (tags && tags.length > 0) {
+                url.searchParams.append('tags', tags.join(','));
+            }
+            
+            url.searchParams.append('limit', '10');
+    
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Search request failed');
+    
             const data = await response.json();
             return {
                 articles: data.articles || [],

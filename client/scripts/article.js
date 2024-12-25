@@ -17,6 +17,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
+    function getUserRole() {
+        const token = localStorage.getItem('token');
+        if (!token) return 'guest';
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.role;
+        } catch (error) {
+            console.error('Error parsing token:', error);
+            return 'guest';
+        }
+    }
+
     const loadArticle = async () => {
         try {
             // Add loading state
@@ -29,13 +41,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
 
             const article = await response.json();
-            console.log("Article data:", article); // Debug log
 
             // Clear existing content
             document.getElementById("article-title").textContent = "";
             document.getElementById("article-content").innerHTML = "";
             document.getElementById("article-tags").innerHTML = "";
             
+            // Display article
+            const userRole = getUserRole();
+            const canViewPremiumContent = ['subscriber', 'editor', 'administrator', 'writer'].includes(userRole);
+
             // Display article
             document.title = article.title;
             document.getElementById("article-title").textContent = article.title;
@@ -56,26 +71,61 @@ document.addEventListener("DOMContentLoaded", async () => {
                 // Hide image container if no featured image
                 imageElement.parentElement.classList.add('hidden');
             }
-            // Display content with preserved formatting
-            const contentDiv = document.getElementById("article-content");
-            contentDiv.innerHTML = article.content || '';
-
-            // Add TinyMCE styles if not present
-            if (!document.querySelector('link[href*="tinymce"]')) {
-                const styleLink = document.createElement('link');
-                styleLink.rel = 'stylesheet';
-                styleLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/5.10.0/skins/content/default/content.min.css';
-                document.head.appendChild(styleLink);
-            }
+            // Display content based on premium status and user role
+        const contentDiv = document.getElementById("article-content");
+        
+        if (article.isPremium && !canViewPremiumContent) {
+            // Show premium content preview
+            contentDiv.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-sm">Premium</span>
+                    </div>
+                    <p class="text-lg mb-4">${article.abstract}</p>
+                    <div class="bg-blue-50 p-6 rounded-lg text-center">
+                        <p class="text-lg font-semibold mb-4">Đây là nội dung premium</p>
+                        <p class="mb-4">Để xem toàn bộ nội dung, bạn cần đăng ký gói Subscriber</p>
+                        <a href="/pages/subscription.html" 
+                           class="inline-block bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                            Đăng ký ngay
+                        </a>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Show full content
+            contentDiv.innerHTML = `
+                ${article.isPremium ? `
+                    <div class="flex items-center space-x-2 mb-4">
+                        <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-sm">Premium</span>
+                    </div>
+                ` : ''}
+                ${article.content || ''}
+            `;
+        }
 
             // Display tags
             const tagsContainer = document.getElementById("article-tags");
-            article.tags?.forEach(tag => {
-                const tagElement = document.createElement("span");
-                tagElement.className = "bg-gray-200 px-3 py-1 rounded-full text-sm mr-2";
-                tagElement.textContent = tag.name;
-                tagsContainer.appendChild(tagElement);
-            });
+            if (article.tags?.length) {
+                tagsContainer.innerHTML = article.tags.map(tag => `
+                    <a 
+                        href="/pages/search.html?tags=${tag._id}" 
+                        class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full text-sm transition-colors"
+                        data-tag-id="${tag._id}"
+                    >
+                        ${tag.name}
+                    </a>
+                `).join('');
+            
+                // Add click handlers for tags
+                tagsContainer.querySelectorAll('a').forEach(tagLink => {
+                    tagLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const tagId = tagLink.dataset.tagId;
+                        window.location.href = `/pages/search.html?tags=${tagId}`;
+                    });
+                });
+            }
 
             // Load comments
             await loadAndDisplayComments();
@@ -87,6 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
+    
     // Load and display comments function
     async function loadAndDisplayComments() {
         const commentsResponse = await fetch(`http://localhost:5000/api/comments/${articleId}`);
@@ -255,6 +306,61 @@ document.addEventListener("DOMContentLoaded", async () => {
             }, 2000);
         }
     }
+    async function loadRelatedArticles() {
+        try {
+            const response = await fetch(`http://localhost:5000/api/article/${articleId}/related`);
+            if (!response.ok) throw new Error('Failed to fetch related articles');
+    
+            const relatedArticles = await response.json();
+            const container = document.getElementById('related-articles');
+    
+            if (relatedArticles.length === 0) {
+                container.parentElement.classList.add('hidden');
+                return;
+            }
+    
+            // Take only first 5 articles
+            const articles = relatedArticles.slice(0, 5);
+    
+            // Update grid class for 5 columns
+            container.className = 'grid grid-cols-5 gap-4';
+    
+            container.innerHTML = articles.map(article => `
+                <article class="bg-white rounded-lg shadow-md overflow-hidden h-full transition-all duration-300 hover:shadow-xl">
+                    <a href="article.html?id=${article._id}" class="block h-full flex flex-col">
+                        <div class="relative h-32">
+                            <img 
+                                src="${formatImageUrl(article.featuredImage)}" 
+                                alt="${article.title}"
+                                class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                onerror="this.onerror=null; this.src='/assets/images/default-article.jpg'"
+                            >
+                        </div>
+                        <div class="p-3 flex-1 flex flex-col">
+                            <div class="mb-2">
+                                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                                    ${article.category?.name || 'Uncategorized'}
+                                </span>
+                            </div>
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 flex-1">
+                                ${article.title}
+                            </h4>
+                            <div class="text-xs text-gray-500">
+                                ${new Date(article.createdAt).toLocaleDateString('vi-VN')}
+                            </div>
+                        </div>
+                    </a>
+                </article>
+            `).join('');
+    
+        } catch (error) {
+            console.error('Error loading related articles:', error);
+            document.getElementById('related-articles').parentElement.classList.add('hidden');
+        }
+    }
+    
+    // Add to loadArticle function
     await loadArticle();
+    await loadRelatedArticles(); // Add this line
 
 });

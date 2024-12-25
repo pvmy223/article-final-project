@@ -8,8 +8,10 @@ const articleController = require('../controllers/articleController');
 router.get('/featured', articleController.getFeaturedArticles);
 router.get('/most-viewed', articleController.getMostViewedArticles);
 router.get('/latest', articleController.getLatestArticles);
-// router.get('/top-by-category', articleController.getTopByCategory);
 router.get('/search', articleController.searchArticles);
+router.get('/latest-by-category', articleController.getLatestArticlesByCategory);
+router.get('/:id/related', articleController.getRelatedArticles);
+
 
 
 // Specific routes first
