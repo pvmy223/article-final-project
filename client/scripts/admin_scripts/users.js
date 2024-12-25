@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderUsers = (userList) => {
         const tbody = document.getElementById('usersTableBody');
+        if (!tbody) return;
         tbody.innerHTML = userList.map(user => `
             <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4">${user.username}</td>
@@ -105,8 +106,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </tr>
         `).join('');
     };
+
     const updateCategorySelect = (currentUser = null) => {
         const select = document.getElementById('managedCategories');
+        if (!select) return;
         select.innerHTML = '';
         
         const addOption = (category, level = 0) => {
@@ -134,39 +137,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         categories
             .filter(category => !category.parent)
             .forEach(category => addOption(category));
-    
     };
+
     // Add role filter event listener
-    document.getElementById('roleFilter').addEventListener('change', (e) => {
-        const roleFilter = e.target.value;
-        filterUsers(roleFilter);
-    });
+    const roleFilterElement = document.getElementById('roleFilter');
+    if (roleFilterElement) {
+        roleFilterElement.addEventListener('change', (e) => {
+            const roleFilter = e.target.value;
+            filterUsers(roleFilter);
+        });
+    }
 
+    const roleElement = document.getElementById('role');
+    if (roleElement) {
+        roleElement.addEventListener('change', (e) => {
+            const categorySection = document.getElementById('categorySection');
+            const subscriptionSection = document.getElementById('subscriptionSection');
+            
+            if (categorySection && subscriptionSection) {
+                categorySection.classList.toggle('hidden', e.target.value !== 'editor');
+                subscriptionSection.classList.toggle('hidden', e.target.value !== 'subscriber');
+            }
+        });
+    }
+
+    // Load initial data
     try {
-        const roleFilterElement = document.getElementById('roleFilter');
-        if (roleFilterElement) {
-            roleFilterElement.addEventListener('change', (e) => {
-                const roleFilter = e.target.value;
-                filterUsers(roleFilter);
-            });
-        }
-
-        const roleElement = document.getElementById('role');
-        if (roleElement) {
-            roleElement.addEventListener('change', (e) => {
-                const categorySection = document.getElementById('categorySection');
-                const subscriptionSection = document.getElementById('subscriptionSection');
-                
-                if (categorySection && subscriptionSection) {
-                    categorySection.classList.toggle('hidden', e.target.value !== 'editor');
-                    subscriptionSection.classList.toggle('hidden', e.target.value !== 'subscriber');
-                }
-            });
-        }
-
-        // Load initial data
         await Promise.all([loadUsers(), loadCategories()]);
-        
     } catch (error) {
         console.error('Error initializing page:', error);
         alert('Không thể khởi tạo trang: ' + error.message);
@@ -176,38 +173,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modal = document.getElementById('userModal');
         const form = document.getElementById('userForm');
         
-        // Reset form and hide all sections
-        form.reset();
-        modal.classList.add('hidden');
+        if (form) {
+            form.reset();
+        }
+        if (modal) {
+            modal.classList.add('hidden');
+        }
         
-        // Show all form elements (they might be hidden from category assignment)
-        document.getElementById('username').parentElement.classList.remove('hidden');
-        document.getElementById('email').parentElement.classList.remove('hidden');
-        document.getElementById('role').parentElement.classList.remove('hidden');
+        const usernameParent = document.getElementById('username')?.parentElement;
+        const emailParent = document.getElementById('email')?.parentElement;
+        const roleParent = document.getElementById('role')?.parentElement;
+
+        if (usernameParent) usernameParent.classList.remove('hidden');
+        if (emailParent) emailParent.classList.remove('hidden');
+        if (roleParent) roleParent.classList.remove('hidden');
         
-        // Reset editing state
         editingId = null;
     };
 
-        window.editUser = async (userId) => {
+    window.editUser = async (userId) => {
         const user = users.find(u => u._id === userId);
         if (!user) return;
     
         editingId = userId;
     
-        // Show modal and init
-        document.getElementById('userModal').classList.remove('hidden');
-        document.getElementById('modalTitle').textContent = 'Sửa thông tin người dùng';
-    
-        // Fill form data
-        document.getElementById('username').value = user.username;
-        document.getElementById('email').value = user.email;
-        document.getElementById('role').value = user.role;
-    
+        const modal = document.getElementById('userModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const roleSelect = document.getElementById('role');
         const categorySection = document.getElementById('categorySection');
         const subscriptionSection = document.getElementById('subscriptionSection');
-        const roleSelect = document.getElementById('role');
         
+        if (modal) modal.classList.remove('hidden');
+        if (modalTitle) modalTitle.textContent = 'Sửa thông tin người dùng';
+        if (usernameInput) usernameInput.value = user.username;
+        if (emailInput) emailInput.value = user.email;
+        if (roleSelect) roleSelect.value = user.role;
+    
         function roleChangeHandler(e) {
             const newRole = e.target.value;
             const oldRole = user.role;
@@ -219,16 +222,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const millisecondsToAdd = minutesInWeek * 60 * 1000;
                 const defaultExpiry = new Date(now.getTime() + millisecondsToAdd);
                 
-                document.getElementById('expiryDate').value = defaultExpiry.toISOString().split('T')[0];
+                const expiryDateInput = document.getElementById('expiryDate');
+                if (expiryDateInput) {
+                    expiryDateInput.value = defaultExpiry.toISOString().split('T')[0];
+                }
             }
         
             // Toggle sections visibility
-            categorySection.classList.toggle('hidden', newRole !== 'editor');
-            subscriptionSection.classList.toggle('hidden', newRole !== 'subscriber');
+            if (categorySection) categorySection.classList.toggle('hidden', newRole !== 'editor');
+            if (subscriptionSection) subscriptionSection.classList.toggle('hidden', newRole !== 'subscriber');
         }
     
         // Remove old handler if exists
-        if (roleSelect.dataset.currentHandler) {
+        if (roleSelect && roleSelect.dataset.currentHandler) {
             roleSelect.removeEventListener('change', window[roleSelect.dataset.currentHandler]);
             delete window[roleSelect.dataset.currentHandler];
         }
@@ -236,14 +242,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Store handler with unique name
         const handlerName = `roleChangeHandler_${userId}`;
         window[handlerName] = roleChangeHandler;
-        roleSelect.dataset.currentHandler = handlerName;
+        if (roleSelect) roleSelect.dataset.currentHandler = handlerName;
     
         // Add new handler
-        roleSelect.addEventListener('change', roleChangeHandler);
+        if (roleSelect) roleSelect.addEventListener('change', roleChangeHandler);
     
         // Update close modal
         window.closeModal = () => {
-            if (roleSelect.dataset.currentHandler) {
+            if (roleSelect && roleSelect.dataset.currentHandler) {
                 const handlerName = roleSelect.dataset.currentHandler;
                 roleSelect.removeEventListener('change', window[handlerName]);
                 delete window[handlerName];
@@ -253,54 +259,80 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modal = document.getElementById('userModal');
             const form = document.getElementById('userForm');
             
-            form.reset();
-            modal.classList.add('hidden');
+            if (form) form.reset();
+            if (modal) modal.classList.add('hidden');
             
-            document.getElementById('username').parentElement.classList.remove('hidden');
-            document.getElementById('email').parentElement.classList.remove('hidden');
-            document.getElementById('role').parentElement.classList.remove('hidden');
+            const usernameParent = document.getElementById('username')?.parentElement;
+            const emailParent = document.getElementById('email')?.parentElement;
+            const roleParent = document.getElementById('role')?.parentElement;
+
+            if (usernameParent) usernameParent.classList.remove('hidden');
+            if (emailParent) emailParent.classList.remove('hidden');
+            if (roleParent) roleParent.classList.remove('hidden');
             
             editingId = null;
         };
     
         // Show/hide sections based on current role
-        categorySection.classList.toggle('hidden', user.role !== 'editor');
-        subscriptionSection.classList.toggle('hidden', user.role !== 'subscriber');
+        if (categorySection) categorySection.classList.toggle('hidden', user.role !== 'editor');
+        if (subscriptionSection) subscriptionSection.classList.toggle('hidden', user.role !== 'subscriber');
     };
-    
 
     // Update form submit handler
-        // Update main form submit handler
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
         // Skip if this is a category assignment form
-        if (document.getElementById('categorySection').classList.contains('hidden') === false &&
-            document.getElementById('username').parentElement.classList.contains('hidden')) {
-            return; // Let the category-specific handler handle this
+        const categorySection = document.getElementById('categorySection');
+        const usernameParent = document.getElementById('username')?.parentElement;
+        if (categorySection && !categorySection.classList.contains('hidden') && 
+            usernameParent && usernameParent.classList.contains('hidden')) {
+            return;
         }
         
         try {
+            const roleSelect = document.getElementById('role');
+            if (!roleSelect) {
+                console.error('Role select element not found');
+                throw new Error('Không tìm thấy trường chọn vai trò. Vui lòng tải lại trang.');
+            }
+
+            const role = roleSelect.value?.trim();
+            const validRoles = ["guest", "subscriber", "writer", "editor", "administrator"];
+            
+            if (!role) {
+                throw new Error('Vui lòng chọn vai trò người dùng');
+            }
+
+            if (!validRoles.includes(role)) {
+                console.error(`Invalid role selected: ${role}`);
+                throw new Error(`Vai trò không hợp lệ: ${role}`);
+            }
+
             const url = editingId 
                 ? `http://localhost:5000/api/users/${editingId}/role`
                 : 'http://localhost:5000/api/users';
             
             const formData = {
-                username: document.getElementById('username').value,
-                email: document.getElementById('email').value,
-                role: document.getElementById('role').value
+                username: document.getElementById('username')?.value?.trim(),
+                email: document.getElementById('email')?.value?.trim(),
+                role: role
             };
-    
-            if (formData.role === 'editor') {
-                formData.managedCategories = Array.from(
-                    document.getElementById('managedCategories').selectedOptions
-                ).map(option => option.value);
+
+            // Add role-specific data
+            if (role === 'editor') {
+                const managedCategoriesSelect = document.getElementById('managedCategories');
+                formData.managedCategories = Array.from(managedCategoriesSelect?.selectedOptions || [])
+                    .map(option => option.value);
             }
-    
-            if (formData.role === 'subscriber') {
-                formData.subscriberExpiryDate = document.getElementById('expiryDate').value;
+
+            if (role === 'subscriber') {
+                const expiryDate = document.getElementById('expiryDate')?.value;
+                if (expiryDate) {
+                    formData.subscriberExpiryDate = expiryDate;
+                }
             }
-    
+
             const response = await fetch(url, {
                 method: editingId ? 'PUT' : 'POST',
                 headers: {
@@ -309,17 +341,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 },
                 body: JSON.stringify(formData)
             });
-    
+
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.message || 'Operation failed');
             }
-    
+
             window.closeModal();
             await loadUsers();
             alert('Cập nhật thành công');
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Form submission error:', error);
             alert('Không thể cập nhật: ' + error.message);
         }
     });
@@ -330,16 +362,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     
         editingId = userId;
     
-        // Show modal and set title
-        document.getElementById('userModal').classList.remove('hidden');
-        document.getElementById('modalTitle').textContent = `Phân công chuyên mục cho ${user.username}`;
+        const modal = document.getElementById('userModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const categorySection = document.getElementById('categorySection');
+        const usernameParent = document.getElementById('username')?.parentElement;
+        const emailParent = document.getElementById('email')?.parentElement;
+        const roleParent = document.getElementById('role')?.parentElement;
+        const subscriptionSection = document.getElementById('subscriptionSection');
         
-        // Show only category section
-        document.getElementById('categorySection').classList.remove('hidden');
-        document.getElementById('username').parentElement.classList.add('hidden');
-        document.getElementById('email').parentElement.classList.add('hidden');
-        document.getElementById('role').parentElement.classList.add('hidden');
-        document.getElementById('subscriptionSection').classList.add('hidden');
+        if (modal) modal.classList.remove('hidden');
+        if (modalTitle) modalTitle.textContent = `Phân công chuyên mục cho ${user.username}`;
+        if (categorySection) categorySection.classList.remove('hidden');
+        if (usernameParent) usernameParent.classList.add('hidden');
+        if (emailParent) emailParent.classList.add('hidden');
+        if (roleParent) roleParent.classList.add('hidden');
+        if (subscriptionSection) subscriptionSection.classList.add('hidden');
     
         // Pre-select managed categories and update select
         updateCategorySelect(user);
@@ -367,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        categories: Array.from(select.selectedOptions).map(opt => opt.value)
+                        categories: Array.from(select?.selectedOptions || []).map(opt => opt.value)
                     })
                 });
     
@@ -394,7 +431,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.addEventListener('submit', submitHandler);
         form.setAttribute('data-handlers', submitHandler.name);
     };
+
     // Initialize page
     await Promise.all([loadUsers(), loadCategories()]);
-    document.getElementById('roleFilter').value = ''; // Reset filter on load
+    if (roleFilterElement) roleFilterElement.value = ''; // Reset filter on load
 });

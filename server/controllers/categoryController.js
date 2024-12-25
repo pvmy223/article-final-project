@@ -94,6 +94,45 @@ exports.getAllCategoriesWithSubs = async (req, res) => {
   }
 };
 
+exports.getPublicCategoriesWithSubs = async (req, res) => {
+    try {
+        // Get all categories without authentication requirement
+        const categories = await Category.find({})
+            .select('name description parent')
+            .lean();
+        
+        // Build category map
+        const categoryMap = new Map();
+        categories.forEach(category => {
+            categoryMap.set(category._id.toString(), {
+                ...category,
+                children: []
+            });
+        });
+
+        // Build hierarchy
+        const rootCategories = [];
+        categories.forEach(category => {
+            if (category.parent) {
+                const parentCategory = categoryMap.get(category.parent.toString());
+                if (parentCategory) {
+                    parentCategory.children.push(categoryMap.get(category._id.toString()));
+                }
+            } else {
+                rootCategories.push(categoryMap.get(category._id.toString()));
+            }
+        });
+
+        res.json(rootCategories);
+    } catch (error) {
+        console.error('Public category fetch error:', error);
+        res.status(500).json({
+            message: 'Failed to retrieve categories',
+            error: error.message
+        });
+    }
+};
+
 exports.getCategoryArticles = async (req, res) => {
   try {
       const { id } = req.params;

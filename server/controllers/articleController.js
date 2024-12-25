@@ -208,29 +208,27 @@ exports.reviewArticle = async (req, res) => {
         const { id } = req.params;
         const { approved, feedback } = req.body;
 
+        // Find article
         const article = await Article.findById(id);
+        
         if (!article) {
             return res.status(404).json({ message: 'Article not found' });
         }
 
+        // Update article status and feedback
         if (approved) {
             article.status = 'published';
             article.publishDate = new Date();
-            article.rejectReason = null;
         } else {
-            if (!feedback) {
-                return res.status(400).json({ message: 'Reject reason is required' });
-            }
             article.status = 'rejected';
             article.rejectReason = feedback;
-            article.publishDate = null;
         }
 
-        const updatedArticle = await article.save();
+        await article.save();
 
-        res.json({
+        res.json({ 
             message: approved ? 'Article published' : 'Article rejected',
-            article: updatedArticle
+            article 
         });
 
     } catch (error) {
@@ -393,6 +391,54 @@ exports.getAllArticles = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             message: 'Failed to retrieve articles',
+            error: error.message
+        });
+    }
+};
+
+exports.getFeaturedArticles = async (req, res) => {
+    try {
+        const articles = await Article.find({ status: 'published' })
+            .populate('category', 'name')
+            .populate('tags', 'name')
+            .sort({ views: -1, createdAt: -1 })
+            .limit(4);
+        res.json(articles);
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error fetching featured articles',
+            error: error.message
+        });
+    }
+};
+
+exports.getMostViewedArticles = async (req, res) => {
+    try {
+        const articles = await Article.find({ status: 'published' })
+            .populate('category', 'name')
+            .populate('tags', 'name')
+            .sort({ views: -1 })
+            .limit(10);
+        res.json(articles);
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error fetching most viewed articles',
+            error: error.message
+        });
+    }
+};
+
+exports.getLatestArticles = async (req, res) => {
+    try {
+        const articles = await Article.find({ status: 'published' })
+            .populate('category', 'name')
+            .populate('tags', 'name')
+            .sort({ createdAt: -1 })
+            .limit(10);
+        res.json(articles);
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error fetching latest articles',
             error: error.message
         });
     }

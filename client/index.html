@@ -51,6 +51,21 @@
       .category-card {
         @apply bg-white rounded-lg shadow-md overflow-hidden;
       }
+
+      @layer utilities {
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
     </style>
   </head>
   <body class="bg-gray-100">
@@ -161,31 +176,35 @@
     </header>
 
     <main class="container mx-auto px-4">
-      <section class="featured-articles my-8">
-        <h2 class="text-2xl font-bold mb-4">Bài viết nổi bật</h2>
-        <div class="featured-carousel">
-          <!-- Featured articles carousel items will be inserted here -->
+      <!-- Featured Articles Section -->
+      <section class="featured-articles my-8 h-full">
+        <h2 class="text-2xl font-bold mb-4">Bài viết nổi bật trong tuần</h2>
+        <div class="featured-carousel grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Featured articles will be dynamically inserted here -->
         </div>
       </section>
 
+      <!-- Most Viewed Articles Section -->
       <section class="most-viewed my-8">
-        <h2 class="text-2xl font-bold mb-4">Bài viết được xem nhiều nhất</h2>
-        <div class="article-list grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Most viewed articles list items will be inserted here -->
+        <h2 class="text-2xl font-bold mb-4">10 Bài viết được xem nhiều nhất</h2>
+        <div class="article-list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Most viewed articles will be dynamically inserted here -->
         </div>
       </section>
 
+      <!-- Latest Articles Section -->
       <section class="latest-articles my-8">
-        <h2 class="text-2xl font-bold mb-4">Bài viết mới nhất</h2>
-        <div class="article-list grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Latest articles list items will be inserted here -->
+        <h2 class="text-2xl font-bold mb-4">10 Bài viết mới nhất</h2>
+        <div class="article-list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Latest articles will be dynamically inserted here -->
         </div>
       </section>
 
+      <!-- Top Categories Section -->
       <section class="category-highlights my-8">
-        <h2 class="text-2xl font-bold mb-4">Chuyên mục nổi bật</h2>
-        <div class="category-list grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Top category highlights items will be inserted here -->
+        <h2 class="text-2xl font-bold mb-4">Bài viết mới nhất theo chuyên mục</h2>
+        <div class="category-list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Top category articles will be dynamically inserted here -->
         </div>
       </section>
     </main>

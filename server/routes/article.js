@@ -4,6 +4,11 @@ const { authenticate } = require('../middlewares/authMiddleware');
 const { authorizeEditor, authorizeAdmin, authorizeEditorOrAdmin } = require('../middlewares/authorizeRoles');
 const articleController = require('../controllers/articleController');
 
+// Public article listing routes
+router.get('/featured', articleController.getFeaturedArticles);
+router.get('/most-viewed', articleController.getMostViewedArticles);
+router.get('/latest', articleController.getLatestArticles);
+// router.get('/top-by-category', articleController.getTopByCategory);
 
 // Specific routes first
 router.get('/my-articles', authenticate, articleController.getMyArticles);
