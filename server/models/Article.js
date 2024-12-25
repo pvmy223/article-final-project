@@ -61,11 +61,17 @@ const ArticleSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Full-text search index
-ArticleSchema.index({
-  title: "text",
-  abstract: "text",
-  content: "text",
+// Add text index for fulltext search
+ArticleSchema.index({ 
+    title: 'text', 
+    abstract: 'text', 
+    content: 'text' 
+}, {
+    weights: {
+        title: 10,
+        abstract: 5,
+        content: 1
+    }
 });
 
 module.exports = mongoose.model('Article', ArticleSchema);

@@ -57,41 +57,53 @@ exports.searchArticles = async (req, res) => {
     // Build search query
     const searchQuery = {
       status: "published",
-      $text: { $search: query },
     };
 
-    // Add category filter
-    if (category) {
+    // Only add text search if query exists
+    if (query) {
+      searchQuery.$or = [
+        { title: { $regex: query, $options: "i" } },
+        { content: { $regex: query, $options: "i" } },
+      ];
+    }
+
+    // Add category filter if valid
+    if (category && category !== "undefined" && category !== "") {
       searchQuery.category = category;
     }
 
-    // Add tag filter
-    if (tag) {
+    // Add tag filter if valid
+    if (tag && tag !== "undefined" && tag !== "") {
       searchQuery.tags = tag;
     }
 
-    // Prioritize content for subscribers
-    const modifiedQuery = req.user
-      ? prioritizePremiumContent(searchQuery, req.user)
-      : searchQuery;
-
-    // Perform search
-    const articles = await Article.find(modifiedQuery)
+    // Perform search with pagination
+    const articles = await Article.find(searchQuery)
       .populate("category")
       .populate("tags")
       .populate("author", "username")
       .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .limit(Number(limit))
+      .sort({ createdAt: -1 });
 
+    articles.forEach((article) => {
+      if (article.featuredImage && !article.featuredImage.startsWith("http")) {
+        article.featuredImage = `${req.protocol}://${req.get("host")}${
+          article.featuredImage
+        }`;
+      }
+    });
     // Count total matching articles
-    const total = await Article.countDocuments(modifiedQuery);
+    const total = await Article.countDocuments(searchQuery);
 
     res.json({
       articles,
+      total,
       totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
     });
   } catch (error) {
+    console.error("Search error:", error);
     res.status(500).json({
       message: "Search failed",
       error: error.message,
@@ -100,81 +112,80 @@ exports.searchArticles = async (req, res) => {
 };
 exports.getPendingArticles = async (req, res) => {
   try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-      // Build query
-      const query = { status: 'draft' };
-      if (req.query.category) {
-          query.category = req.query.category;
-      }
+    // Build query
+    const query = { status: "draft" };
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
 
-      // Get articles with pagination
-      const articles = await Article.find(query)
-          .populate('author', 'username')
-          .populate('category', 'name')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean();
+    // Get articles with pagination
+    const articles = await Article.find(query)
+      .populate("author", "username")
+      .populate("category", "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-      // Get total count
-      const total = await Article.countDocuments(query);
+    // Get total count
+    const total = await Article.countDocuments(query);
 
-      res.json({
-          articles,
-          currentPage: page,
-          totalPages: Math.ceil(total / limit),
-          total
-      });
-
+    res.json({
+      articles,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      total,
+    });
   } catch (error) {
-      console.error('Error retrieving pending articles:', error);
-      res.status(500).json({ 
-          message: 'Failed to retrieve articles',
-          error: error.message 
-      });
+    console.error("Error retrieving pending articles:", error);
+    res.status(500).json({
+      message: "Failed to retrieve articles",
+      error: error.message,
+    });
   }
 };
 exports.getMyArticles = async (req, res) => {
-    try {
-        const { page = 1, limit = 10, status, search } = req.query;
-        const skip = (page - 1) * limit;
+  try {
+    const { page = 1, limit = 10, status, search } = req.query;
+    const skip = (page - 1) * limit;
 
-        // Build query
-        let query = { author: req.user.id };
-        
-        // Add status filter
-        if (status) {
-            query.status = status;
-        }
+    // Build query
+    let query = { author: req.user.id };
 
-        // Add search filter
-        if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        const articles = await Article.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
-
-        const total = await Article.countDocuments(query);
-        const totalPages = Math.ceil(total / limit);
-
-        res.json({
-            articles,
-            currentPage: parseInt(page),
-            totalPages,
-            total
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    // Add status filter
+    if (status) {
+      query.status = status;
     }
+
+    // Add search filter
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const articles = await Article.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Article.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      articles,
+      currentPage: parseInt(page),
+      totalPages,
+      total,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 exports.getArticleById = async (req, res) => {
@@ -204,40 +215,39 @@ exports.getArticleById = async (req, res) => {
 };
 
 exports.reviewArticle = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { approved, feedback } = req.body;
+  try {
+    const { id } = req.params;
+    const { approved, feedback } = req.body;
 
-        // Find article
-        const article = await Article.findById(id);
-        
-        if (!article) {
-            return res.status(404).json({ message: 'Article not found' });
-        }
+    // Find article
+    const article = await Article.findById(id);
 
-        // Update article status and feedback
-        if (approved) {
-            article.status = 'published';
-            article.publishDate = new Date();
-        } else {
-            article.status = 'rejected';
-            article.rejectReason = feedback;
-        }
-
-        await article.save();
-
-        res.json({ 
-            message: approved ? 'Article published' : 'Article rejected',
-            article 
-        });
-
-    } catch (error) {
-        console.error('Review article error:', error);
-        res.status(500).json({
-            message: 'Failed to review article',
-            error: error.message
-        });
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
     }
+
+    // Update article status and feedback
+    if (approved) {
+      article.status = "published";
+      article.publishDate = new Date();
+    } else {
+      article.status = "rejected";
+      article.rejectReason = feedback;
+    }
+
+    await article.save();
+
+    res.json({
+      message: approved ? "Article published" : "Article rejected",
+      article,
+    });
+  } catch (error) {
+    console.error("Review article error:", error);
+    res.status(500).json({
+      message: "Failed to review article",
+      error: error.message,
+    });
+  }
 };
 
 exports.updateArticle = async (req, res) => {
@@ -283,25 +293,25 @@ exports.updateArticle = async (req, res) => {
 
 exports.deleteArticle = async (req, res) => {
   try {
-      const article = await Article.findOneAndDelete({
-          _id: req.params.id,
-          author: req.user.id
-      });
+    const article = await Article.findOneAndDelete({
+      _id: req.params.id,
+      author: req.user.id,
+    });
 
-      if (!article) {
-          return res.status(404).json({
-              message: 'Article not found or unauthorized'
-          });
-      }
-
-      res.json({
-          message: 'Article deleted successfully'
+    if (!article) {
+      return res.status(404).json({
+        message: "Article not found or unauthorized",
       });
+    }
+
+    res.json({
+      message: "Article deleted successfully",
+    });
   } catch (error) {
-      res.status(500).json({
-          message: 'Failed to delete article',
-          error: error.message
-      });
+    res.status(500).json({
+      message: "Failed to delete article",
+      error: error.message,
+    });
   }
 };
 
@@ -356,90 +366,90 @@ exports.getTopArticles = async (req, res) => {
 };
 
 exports.getAllArticles = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-        // Build query based on filters
-        const query = {};
-        if (req.query.status) query.status = req.query.status;
-        if (req.query.category) query.category = req.query.category;
-        if (req.query.search) {
-            query.$or = [
-                { title: { $regex: req.query.search, $options: 'i' } },
-                { content: { $regex: req.query.search, $options: 'i' } }
-            ];
-        }
-
-        const articles = await Article.find(query)
-            .populate('author', 'username')
-            .populate('category', 'name')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        const total = await Article.countDocuments(query);
-
-        res.json({
-            articles,
-            currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            total
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: 'Failed to retrieve articles',
-            error: error.message
-        });
+    // Build query based on filters
+    const query = {};
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.category) query.category = req.query.category;
+    if (req.query.search) {
+      query.$or = [
+        { title: { $regex: req.query.search, $options: "i" } },
+        { content: { $regex: req.query.search, $options: "i" } },
+      ];
     }
+
+    const articles = await Article.find(query)
+      .populate("author", "username")
+      .populate("category", "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await Article.countDocuments(query);
+
+    res.json({
+      articles,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      total,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to retrieve articles",
+      error: error.message,
+    });
+  }
 };
 
 exports.getFeaturedArticles = async (req, res) => {
-    try {
-        const articles = await Article.find({ status: 'published' })
-            .populate('category', 'name')
-            .populate('tags', 'name')
-            .sort({ views: -1, createdAt: -1 })
-            .limit(4);
-        res.json(articles);
-    } catch (error) {
-        res.status(500).json({
-            message: 'Error fetching featured articles',
-            error: error.message
-        });
-    }
+  try {
+    const articles = await Article.find({ status: "published" })
+      .populate("category", "name")
+      .populate("tags", "name")
+      .sort({ views: -1, createdAt: -1 })
+      .limit(4);
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching featured articles",
+      error: error.message,
+    });
+  }
 };
 
 exports.getMostViewedArticles = async (req, res) => {
-    try {
-        const articles = await Article.find({ status: 'published' })
-            .populate('category', 'name')
-            .populate('tags', 'name')
-            .sort({ views: -1 })
-            .limit(10);
-        res.json(articles);
-    } catch (error) {
-        res.status(500).json({
-            message: 'Error fetching most viewed articles',
-            error: error.message
-        });
-    }
+  try {
+    const articles = await Article.find({ status: "published" })
+      .populate("category", "name")
+      .populate("tags", "name")
+      .sort({ views: -1 })
+      .limit(10);
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching most viewed articles",
+      error: error.message,
+    });
+  }
 };
 
 exports.getLatestArticles = async (req, res) => {
-    try {
-        const articles = await Article.find({ status: 'published' })
-            .populate('category', 'name')
-            .populate('tags', 'name')
-            .sort({ createdAt: -1 })
-            .limit(10);
-        res.json(articles);
-    } catch (error) {
-        res.status(500).json({
-            message: 'Error fetching latest articles',
-            error: error.message
-        });
-    }
+  try {
+    const articles = await Article.find({ status: "published" })
+      .populate("category", "name")
+      .populate("tags", "name")
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching latest articles",
+      error: error.message,
+    });
+  }
 };

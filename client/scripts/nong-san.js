@@ -6,17 +6,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const createArticleCard = (article) => `
         <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-            <a href="/pages/article.html?id=${article._id}" class="block">
-                <img src="${formatImageUrl(article.featuredImage)}" 
-                     alt="${article.title}"
-                     class="w-full h-48 object-cover"
-                     onerror="this.src='../../assets/images/placeholder.jpg'">
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">${article.title}</h3>
-                    <p class="text-gray-600 text-sm mb-3 line-clamp-2">${article.abstract || ''}</p>
-                    <div class="flex justify-between items-center text-sm text-gray-500">
+            <a href="/pages/article.html?id=${article._id}" class="flex">
+                <div class="w-1/3">
+                    <img src="${formatImageUrl(article.featuredImage)}" 
+                         alt="${article.title}"
+                         class="w-full h-full object-cover"
+                         onerror="this.onerror=null; this.src='/assets/images/placeholder.jpg'">
+                </div>
+                <div class="w-2/3 p-4">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3 line-clamp-2">${article.title}</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">${article.abstract || ''}</p>
+                    <div class="flex justify-between items-center text-sm text-gray-500 mt-auto">
                         <span>${new Date(article.createdAt).toLocaleDateString('vi-VN')}</span>
-                        <span>${article.views || 0} lượt xem</span>
+                        <span>${article.viewCount || 0} lượt xem</span>
                     </div>
                 </div>
             </a>
@@ -24,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
 
     const formatImageUrl = (imageUrl) => {
-        if (!imageUrl) return '../../assets/images/placeholder.jpg';
+        if (!imageUrl) return '../../server/uploads/articles/1734685765080-158529008.jpg';
         return imageUrl.startsWith('http') ? imageUrl : `http://localhost:5000${imageUrl}`;
     };
 

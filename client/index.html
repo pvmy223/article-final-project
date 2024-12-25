@@ -143,6 +143,17 @@
             >
           </div>
 
+          <!-- Add search box before the auth section -->
+          <div class="relative mx-4 flex-1 max-w-xl">
+            <input type="search" 
+                id="searchBox"
+                placeholder="Tìm kiếm bài viết..." 
+                class="w-full px-4 py-2 text-gray-700 bg-white border rounded-md focus:border-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-40">
+            <div id="searchResults" class="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg hidden">
+                <!-- Search results will be populated here -->
+            </div>
+          </div>
+
           <!-- Single Auth Section -->
           <div id="authSection" class="hidden md:flex items-center relative">
             <a
@@ -179,7 +190,7 @@
       <!-- Featured Articles Section -->
       <section class="featured-articles my-8 h-full">
         <h2 class="text-2xl font-bold mb-4">Bài viết nổi bật trong tuần</h2>
-        <div class="featured-carousel grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="featured-carousel grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-[800px]">
           <!-- Featured articles will be dynamically inserted here -->
         </div>
       </section>

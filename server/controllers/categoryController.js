@@ -96,33 +96,42 @@ exports.getAllCategoriesWithSubs = async (req, res) => {
 
 exports.getPublicCategoriesWithSubs = async (req, res) => {
     try {
-        // Get all categories without authentication requirement
-        const categories = await Category.find({})
-            .select('name description parent')
+        // Get all categories with populated parent field
+        const categories = await Category.find()
+            .populate('parent')
             .lean();
-        
-        // Build category map
+
+        console.log('Raw categories:', categories); // Debug log
+
+        // Build category map with proper IDs
         const categoryMap = new Map();
         categories.forEach(category => {
             categoryMap.set(category._id.toString(), {
-                ...category,
+                _id: category._id,
+                name: category.name,
+                description: category.description,
+                parent: category.parent?._id?.toString(),
                 children: []
             });
         });
 
-        // Build hierarchy
+        console.log('Category map:', Object.fromEntries(categoryMap)); // Debug log
+
+        // Build hierarchy correctly
         const rootCategories = [];
         categories.forEach(category => {
-            if (category.parent) {
-                const parentCategory = categoryMap.get(category.parent.toString());
-                if (parentCategory) {
-                    parentCategory.children.push(categoryMap.get(category._id.toString()));
-                }
+            const categoryId = category._id.toString();
+            const parentId = category.parent?._id?.toString();
+
+            if (parentId && categoryMap.has(parentId)) {
+                const parent = categoryMap.get(parentId);
+                parent.children.push(categoryMap.get(categoryId));
             } else {
-                rootCategories.push(categoryMap.get(category._id.toString()));
+                rootCategories.push(categoryMap.get(categoryId));
             }
         });
 
+        console.log('Root categories:', rootCategories); // Debug log
         res.json(rootCategories);
     } catch (error) {
         console.error('Public category fetch error:', error);

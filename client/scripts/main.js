@@ -128,4 +128,54 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const searchBox = document.getElementById('searchBox');
+    const searchResults = document.getElementById('searchResults');
+
+    // Add search functionality
+    searchBox.addEventListener('keyup', async (e) => {
+        const query = e.target.value.trim();
+        
+        if (e.key === 'Enter' && query) {
+            // Navigate to search page with query
+            window.location.href = `/pages/search.html?query=${encodeURIComponent(query)}`;
+            return;
+        }
+
+        // Show/hide results dropdown
+        if (query.length < 2) {
+            searchResults.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const url = new URL(`${SearchService.API_BASE_URL}/api/article/search`);
+            url.searchParams.append('query', query);
+            url.searchParams.append('limit', '5'); // Quick results limit
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.articles?.length) {
+                searchResults.innerHTML = data.articles.map(article => `
+                    <a href="/articles/${article.id}" class="block p-2 hover:bg-gray-100">
+                        <div class="text-sm font-medium">${article.title}</div>
+                        <div class="text-xs text-gray-500">${article.category}</div>
+                    </a>
+                `).join('');
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+        }
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!searchBox.contains(e.target)) {
+            searchResults.classList.add('hidden');
+        }
+    });
 });
